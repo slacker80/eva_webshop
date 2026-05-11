@@ -2,116 +2,204 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Database
+const sequelize = require('./database');
+
+// Session STORE
+const sessionStore = new SequelizeStore({
+  db: sequelize
+});
+
 // Middleware
-app.use(cors());
+app.use(helmet());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP
+});
+app.use(limiter);
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'SAFE_SECRET_FOR_DEV',
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 24h
+}));
+
+app.use(cors({
+  origin: true, // Allow elke origin in dev
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory data storage
-let products = [
-  { id: 1, name: 'Eva Smart Watch', price: 299.99, description: 'Advanced fitness tracking with AI assistant', category: 'electronics', stock: 15 },
-  { id: 2, name: 'Eva Wireless Earbuds', price: 149.99, description: 'Premium sound quality with noise cancellation', category: 'electronics', stock: 25 },
-  { id: 3, name: 'Eva Yoga Mat', price: 49.99, description: 'Eco-friendly non-slip exercise mat', category: 'fitness', stock: 30 },
-  { id: 4, name: 'Eva Water Bottle', price: 24.99, description: 'Insulated stainless steel, keeps drinks cold for 24h', category: 'fitness', stock: 50 },
-  { id: 5, name: 'Eva Laptop Stand', price: 79.99, description: 'Ergonomic aluminum stand for better posture', category: 'accessories', stock: 20 }
-];
+// Initialize session store
+sessionStore.sync();
 
-let cart = [];
+// Models
+const Product = require('./models/Product');
+const CartModel = require('./models/Cart');
+
+// Seed data
+const seedProducts = require('./seed');
+
+// Initialize database models and seed
+sequelize.sync().then(async () => {
+  console.log('Database gesynchroniseerd. Starten met seeden...');
+  await seedProducts();
+}).catch(err => {
+  console.error('Fout bij synchronisatie van de database:', err);
+});
 
 // Routes
 // Get all products
-app.get('/api/products', (req, res) => {
-  res.json(products);
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await Product.findAll();
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
 });
 
 // Get single product
-app.get('/api/products/:id', (req, res) => {
-  const product = products.find(p => p.id === parseInt(req.params.id));
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' });
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findByPk(parseInt(req.params.id));
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch product' });
   }
-  res.json(product);
 });
 
 // Get products by category
-app.get('/api/products/category/:category', (req, res) => {
-  const categoryProducts = products.filter(p => p.category === req.params.category);
-  res.json(categoryProducts);
+app.get('/api/products/category/:category', async (req, res) => {
+  try {
+    const categoryProducts = await Product.findAll({
+      where: { category: req.params.category }
+    });
+    res.json(categoryProducts);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch products by category' });
+  }
 });
 
 // Get cart
-app.get('/api/cart', (req, res) => {
-  res.json(cart);
+app.get('/api/cart', async (req, res) => {
+  try {
+    const cartItems = await CartModel.findAll();
+    res.json(cartItems);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch cart' });
+  }
 });
 
 // Add item to cart
-app.post('/api/cart', (req, res) => {
+app.post('/api/cart', async (req, res) => {
   const { productId, quantity } = req.body;
-  
-  const product = products.find(p => p.id === productId);
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' });
-  }
-  
-  if (product.stock < quantity) {
-    return res.status(400).json({ error: 'Insufficient stock' });
-  }
-  
-  const existingItem = cart.find(item => item.productId === productId);
-  
-  if (existingItem) {
-    existingItem.quantity += quantity;
-  } else {
-    cart.push({
-      productId,
-      name: product.name,
-      price: product.price,
-      quantity
-    });
-  }
-  
-  res.json({ message: 'Item added to cart', cart });
-});
 
-// Update cart item
-app.put('/api/cart/:productId', (req, res) => {
-  const { productId } = req.params;
-  const { quantity } = req.body;
-  
-  const item = cart.find(item => item.productId === parseInt(productId));
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found in cart' });
-  }
-  
-  if (quantity <= 0) {
-    cart = cart.filter(item => item.productId !== parseInt(productId));
-  } else {
-    const product = products.find(p => p.id === parseInt(productId));
+  try {
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
     if (product.stock < quantity) {
       return res.status(400).json({ error: 'Insufficient stock' });
     }
-    item.quantity = quantity;
+
+    const [cartItem, created] = await CartModel.findOrCreate({
+      where: { productId: productId },
+      defaults: {
+        name: product.name,
+        price: product.price,
+        quantity: quantity
+      }
+    });
+
+    if (!created) {
+      cartItem.quantity += quantity;
+      await cartItem.save();
+    }
+
+    const cartItems = await CartModel.findAll();
+    res.json({ message: 'Item added to cart', cart: cartItems });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add item to cart' });
   }
-  
-  res.json({ message: 'Cart updated', cart });
+});
+
+// Update cart item
+app.put('/api/cart/:productId', async (req, res) => {
+  const { productId } = req.params;
+  const { quantity } = req.body;
+
+  try {
+    const cartItem = await CartModel.findOne({ where: { productId: parseInt(productId) } });
+    if (!cartItem) {
+      return res.status(404).json({ error: 'Item not found in cart' });
+    }
+
+    if (quantity <= 0) {
+      await cartItem.destroy();
+    } else {
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      if (product.stock < quantity) {
+        return res.status(400).json({ error: 'Insufficient stock' });
+      }
+      cartItem.quantity = quantity;
+      await cartItem.save();
+    }
+
+    const cartItems = await CartModel.findAll();
+    res.json({ message: 'Cart updated', cart: cartItems });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update cart item' });
+  }
 });
 
 // Remove item from cart
-app.delete('/api/cart/:productId', (req, res) => {
+app.delete('/api/cart/:productId', async (req, res) => {
   const productId = parseInt(req.params.productId);
-  cart = cart.filter(item => item.productId !== productId);
-  res.json({ message: 'Item removed from cart', cart });
+
+  try {
+    const cartItem = await CartModel.findOne({ where: { productId } });
+    if (!cartItem) {
+      return res.status(404).json({ error: 'Item not found in cart' });
+    }
+
+    await cartItem.destroy();
+
+    const cartItems = await CartModel.findAll();
+    res.json({ message: 'Item removed from cart', cart: cartItems });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove item from cart' });
+  }
 });
 
 // Clear cart
-app.delete('/api/cart', (req, res) => {
-  cart = [];
-  res.json({ message: 'Cart cleared', cart });
+app.delete('/api/cart', async (req, res) => {
+  try {
+    await CartModel.destroy({ where: {} }); // Verwijder alles
+    res.json({ message: 'Cart cleared', cart: [] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to clear cart' });
+  }
 });
 
 // Serve index.html for all other routes
