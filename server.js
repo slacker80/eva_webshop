@@ -14,7 +14,7 @@ app.set('trust proxy', 1);
 // Rate limiting (BEFORE routes)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000 // limit each IP to 1000 requests per windowMs
 });
 app.use(limiter);
 
@@ -155,5 +155,5 @@ app.get('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Eva Webshop server running on port ${PORT}`);
+  console.log(`Crystal Jewelz server running on port ${PORT}`);
 });

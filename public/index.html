@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eva Webshop</title>
+    <title>Crystal Jewelz - Handmade Jewelry</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
         }
         
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #d4af37 100%);
             color: white;
             padding: 1rem 0;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -83,9 +83,9 @@
         
         .filter-btn {
             padding: 0.5rem 1rem;
-            border: 2px solid #667eea;
+            border: 2px solid #7b1fa2;
             background: white;
-            color: #667eea;
+            color: #7b1fa2;
             border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s;
@@ -93,7 +93,7 @@
         }
         
         .filter-btn:hover, .filter-btn.active {
-            background: #667eea;
+            background: #7b1fa2;
             color: white;
         }
         
@@ -126,8 +126,8 @@
         
         .product-category {
             display: inline-block;
-            background: #e2e8f0;
-            color: #4a5568;
+            background: rgba(123, 31, 162, 0.2);
+            color: #7b1fa2;
             padding: 0.25rem 0.75rem;
             border-radius: 15px;
             font-size: 0.8rem;
@@ -149,11 +149,11 @@
         .product-price {
             font-size: 1.5rem;
             font-weight: bold;
-            color: #667eea;
+            color: #d4af37;
         }
         
         .add-to-cart {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -230,7 +230,7 @@
         }
         
         .quantity-btn {
-            background: #667eea;
+            background: #7b1fa2;
             color: white;
             border: none;
             width: 30px;
@@ -243,7 +243,7 @@
         .cart-total {
             margin-top: 2rem;
             padding-top: 1rem;
-            border-top: 2px solid #667eea;
+            border-top: 2px solid #d4af37;
             font-size: 1.2rem;
             font-weight: bold;
             text-align: right;
@@ -277,7 +277,7 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="logo">🛍️ Eva Webshop</div>
+                <div class="logo">💎 Crystal Jewelz</div>
                 <div class="cart-info" onclick="toggleCart()">
                     🛒 Cart
                     <span class="cart-count" id="cartCount">0</span>
@@ -290,9 +290,11 @@
         <div class="container">
             <div class="filters">
                 <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
-                <button class="filter-btn" onclick="filterProducts('electronics')">Electronics</button>
-                <button class="filter-btn" onclick="filterProducts('fitness')">Fitness</button>
-                <button class="filter-btn" onclick="filterProducts('accessories')">Accessories</button>
+                <button class="filter-btn" onclick="filterProducts('bracelets')">Bracelets</button>
+                <button class="filter-btn" onclick="filterProducts('necklaces')">Necklaces</button>
+                <button class="filter-btn" onclick="filterProducts('rings')">Rings</button>
+                <button class="filter-btn" onclick="filterProducts('anklets')">Anklets</button>
+                <button class="filter-btn" onclick="filterProducts('earrings')">Earrings</button>
             </div>
 
             <div id="productsContainer" class="products-grid">
