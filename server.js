@@ -27,11 +27,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory data storage
 let products = [
-  { id: 1, name: 'Eva Smart Watch', price: 299.99, description: 'Advanced fitness tracking with AI assistant', category: 'electronics', stock: 15 },
-  { id: 2, name: 'Eva Wireless Earbuds', price: 149.99, description: 'Premium sound quality with noise cancellation', category: 'electronics', stock: 25 },
-  { id: 3, name: 'Eva Yoga Mat', price: 49.99, description: 'Eco-friendly non-slip exercise mat', category: 'fitness', stock: 30 },
-  { id: 4, name: 'Eva Water Bottle', price: 24.99, description: 'Insulated stainless steel, keeps drinks cold for 24h', category: 'fitness', stock: 50 },
-  { id: 5, name: 'Eva Laptop Stand', price: 79.99, description: 'Ergonomic aluminum stand for better posture', category: 'accessories', stock: 20 }
+  // Bracelets
+  { id: 1, name: 'Silver Beaded Bracelet', price: 24.99, description: 'Handcrafted with genuine silver beads', category: 'bracelets', stock: 8 },
+  { id: 2, name: 'Gemstone Bracelet', price: 29.99, description: 'Mixed gemstones on elastic cord', category: 'bracelets', stock: 5 },
+  { id: 3, name: 'Pearl Stretch Bracelet', price: 19.99, description: 'Elegant pearl beads', category: 'bracelets', stock: 12 },
+  
+  // Necklaces
+  { id: 4, name: 'Crystal Pendant Necklace', price: 34.99, description: 'Handmade with Swarovski crystals', category: 'necklaces', stock: 6 },
+  { id: 5, name: 'Boho Beaded Necklace', price: 27.99, description: 'Mixed wood and gemstone beads', category: 'necklaces', stock: 9 },
+  { id: 6, name: 'Gold Chain Necklace', price: 39.99, description: '14K gold-plated chain with pendant', category: 'necklaces', stock: 4 },
+  
+  // Rings
+  { id: 7, name: 'Gemstone Ring', price: 22.99, description: 'Adjustable ring with natural gemstone', category: 'rings', stock: 10 },
+  { id: 8, name: 'Silver Spiral Ring', price: 18.99, description: 'Handmade sterling silver', category: 'rings', stock: 7 },
+  
+  // Anklets
+  { id: 9, name: 'Beaded Anklet', price: 16.99, description: 'Colorful gemstone beads', category: 'anklets', stock: 14 },
+  { id: 10, name: 'Gold Anklet', price: 21.99, description: 'Gold-plated with charm', category: 'anklets', stock: 8 },
+  
+  // Earrings
+  { id: 11, name: 'Drop Pearl Earrings', price: 19.99, description: 'Elegant pearl drops', category: 'earrings', stock: 11 },
+  { id: 12, name: 'Crystal Stud Earrings', price: 14.99, description: 'Sparkling crystal studs', category: 'earrings', stock: 15 }
 ];
 
 let cart = [];
