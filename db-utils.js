@@ -67,7 +67,8 @@ function initDefaultAdmin() {
       if (err) {
         reject(err);
       } else if (!row) {
-        const hash = bcrypt.hashSync('admin123', 10);
+        const defaultPassword = process.env.ADMIN_PASSWORD || generateSecurePassword();
+        const hash = bcrypt.hashSync(defaultPassword, 10);
         db.run('INSERT INTO admin_users (username, password_hash) VALUES (?, ?)', 
           ['admin', hash], 
           (err) => {
@@ -80,6 +81,17 @@ function initDefaultAdmin() {
       }
     });
   });
+}
+
+// Generate secure random password
+function generateSecurePassword() {
+  const length = 16;
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset.charAt(Math.floor(Math.random() * charset.length));
+  }
+  return password;
 }
 
 // Product functions

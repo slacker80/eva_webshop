@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
+const csrf = require('csurf');
 const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword } = require('./db-utils');
 
 const app = express();
@@ -31,11 +32,15 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(session({
-  secret: 'crystal-jewelz-secret-key',
+  secret: process.env.SESSION_SECRET || 'fallback-for-dev',
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days instead of 24h
+  cookie: { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days instead of 24h
 }));
+
+// CSRF protection
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // IP whitelist for admin access
@@ -116,11 +121,11 @@ app.get('/api/homepage', async (req, res) => {
 
 // ==== ADMIN AUTH ROUTES ====
 
-app.get("/admin/login", checkAdminIP, (req, res) => { => {
+app.get("/admin/login", checkAdminIP, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
 });
 
-app.post("/admin/login", checkAdminIP, async (req, res) => { => {
+app.post("/admin/login", checkAdminIP, async (req, res) => {
   const username = (req.body.username || '').toLowerCase();
   const password = req.body.password;
   
@@ -146,7 +151,7 @@ app.get('/admin/logout', (req, res) => {
   });
 });
 
-app.get("/admin", checkAdminIP, (req, res) => { => {
+app.get("/admin", checkAdminIP, (req, res) => {
   if (!req.session.admin) {
     return res.redirect('/admin/login');
   }
@@ -155,7 +160,7 @@ app.get("/admin", checkAdminIP, (req, res) => { => {
 
 // ==== ADMIN API ROUTES ====
 
-app.get('/api/admin/products', requireAuth, async (req, res) => {
+app.get('/api/admin/products', requireAuth, csrfProtection, async (req, res) => {
   try {
     const products = await getProducts();
     res.json(products);
@@ -164,7 +169,7 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/admin/products', requireAuth, async (req, res) => {
+app.post('/api/admin/products', requireAuth, csrfProtection, async (req, res) => {
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   if (!name || price === undefined) {
@@ -188,7 +193,7 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
+app.put('/api/admin/products/:id', requireAuth, csrfProtection, async (req, res) => {
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   try {
@@ -207,7 +212,7 @@ app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
+app.delete('/api/admin/products/:id', requireAuth, csrfProtection, async (req, res) => {
   try {
     await deleteProduct(parseInt(req.params.id));
     res.json({ success: true });
@@ -225,7 +230,7 @@ app.get('/api/admin/homepage', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/homepage', requireAuth, async (req, res) => {
+app.put('/api/admin/homepage', requireAuth, csrfProtection, async (req, res) => {
   const { banner_title, banner_subtitle, intro_text, featured_product_ids } = req.body;
   
   try {
@@ -241,7 +246,7 @@ app.put('/api/admin/homepage', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/password', requireAuth, async (req, res) => {
+app.put('/api/admin/password', requireAuth, csrfProtection, async (req, res) => {
   const { newPassword } = req.body;
   
   if (!newPassword || newPassword.length < 4) {
