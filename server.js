@@ -2,11 +2,24 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for correct client IPs behind reverse proxy
+app.set('trust proxy', 1);
+
+// Rate limiting (BEFORE routes)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+
 // Middleware
+app.use(helmet());
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -112,6 +125,11 @@ app.delete('/api/cart/:productId', (req, res) => {
 app.delete('/api/cart', (req, res) => {
   cart = [];
   res.json({ message: 'Cart cleared', cart });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // Serve index.html for all other routes
