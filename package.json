@@ -7,14 +7,23 @@
     "start": "node server.js",
     "prestart": "echo 'Installing production dependencies...' && npm install --production"
   },
-  "keywords": ["eva", "webshop", "express", "ecommerce"],
+  "keywords": [
+    "eva",
+    "webshop",
+    "express",
+    "ecommerce"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
+    "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "express-session": "^1.19.0",
     "helmet": "^7.0.0",
-    "express-rate-limit": "^6.7.0"
+    "sqlite3": "^6.0.1"
   }
 }

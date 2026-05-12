@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword } = require('./db-utils');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,130 +26,227 @@ app.use(helmet());
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(session({
+  secret: 'crystal-jewelz-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// In-memory data storage
-let products = [
-  // Bracelets
-  { id: 1, name: 'Silver Beaded Bracelet', price: 24.99, description: 'Handcrafted with genuine silver beads', category: 'bracelets', stock: 8 },
-  { id: 2, name: 'Gemstone Bracelet', price: 29.99, description: 'Mixed gemstones on elastic cord', category: 'bracelets', stock: 5 },
-  { id: 3, name: 'Pearl Stretch Bracelet', price: 19.99, description: 'Elegant pearl beads', category: 'bracelets', stock: 12 },
-  
-  // Necklaces
-  { id: 4, name: 'Crystal Pendant Necklace', price: 34.99, description: 'Handmade with Swarovski crystals', category: 'necklaces', stock: 6 },
-  { id: 5, name: 'Boho Beaded Necklace', price: 27.99, description: 'Mixed wood and gemstone beads', category: 'necklaces', stock: 9 },
-  { id: 6, name: 'Gold Chain Necklace', price: 39.99, description: '14K gold-plated chain with pendant', category: 'necklaces', stock: 4 },
-  
-  // Rings
-  { id: 7, name: 'Gemstone Ring', price: 22.99, description: 'Adjustable ring with natural gemstone', category: 'rings', stock: 10 },
-  { id: 8, name: 'Silver Spiral Ring', price: 18.99, description: 'Handmade sterling silver', category: 'rings', stock: 7 },
-  
-  // Anklets
-  { id: 9, name: 'Beaded Anklet', price: 16.99, description: 'Colorful gemstone beads', category: 'anklets', stock: 14 },
-  { id: 10, name: 'Gold Anklet', price: 21.99, description: 'Gold-plated with charm', category: 'anklets', stock: 8 },
-  
-  // Earrings
-  { id: 11, name: 'Drop Pearl Earrings', price: 19.99, description: 'Elegant pearl drops', category: 'earrings', stock: 11 },
-  { id: 12, name: 'Crystal Stud Earrings', price: 14.99, description: 'Sparkling crystal studs', category: 'earrings', stock: 15 }
-];
-
-let cart = [];
-
-// Routes
-// Get all products
-app.get('/api/products', (req, res) => {
-  res.json(products);
-});
-
-// Get single product
-app.get('/api/products/:id', (req, res) => {
-  const product = products.find(p => p.id === parseInt(req.params.id));
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' });
+// Auth middleware
+function requireAuth(req, res, next) {
+  if (!req.session.admin) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  res.json(product);
-});
+  next();
+}
 
-// Get products by category
-app.get('/api/products/category/:category', (req, res) => {
-  const categoryProducts = products.filter(p => p.category === req.params.category);
-  res.json(categoryProducts);
-});
+// Initialize database on startup
+initDatabase().catch(err => console.error('DB init error:', err));
 
-// Get cart
-app.get('/api/cart', (req, res) => {
-  res.json(cart);
-});
-
-// Add item to cart
-app.post('/api/cart', (req, res) => {
-  const { productId, quantity } = req.body;
-  
-  const product = products.find(p => p.id === productId);
-  if (!product) {
-    return res.status(404).json({ error: 'Product not found' });
-  }
-  
-  if (product.stock < quantity) {
-    return res.status(400).json({ error: 'Insufficient stock' });
-  }
-  
-  const existingItem = cart.find(item => item.productId === productId);
-  
-  if (existingItem) {
-    existingItem.quantity += quantity;
-  } else {
-    cart.push({
-      productId,
-      name: product.name,
-      price: product.price,
-      quantity
-    });
-  }
-  
-  res.json({ message: 'Item added to cart', cart });
-});
-
-// Update cart item
-app.put('/api/cart/:productId', (req, res) => {
-  const { productId } = req.params;
-  const { quantity } = req.body;
-  
-  const item = cart.find(item => item.productId === parseInt(productId));
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found in cart' });
-  }
-  
-  if (quantity <= 0) {
-    cart = cart.filter(item => item.productId !== parseInt(productId));
-  } else {
-    const product = products.find(p => p.id === parseInt(productId));
-    if (product.stock < quantity) {
-      return res.status(400).json({ error: 'Insufficient stock' });
-    }
-    item.quantity = quantity;
-  }
-  
-  res.json({ message: 'Cart updated', cart });
-});
-
-// Remove item from cart
-app.delete('/api/cart/:productId', (req, res) => {
-  const productId = parseInt(req.params.productId);
-  cart = cart.filter(item => item.productId !== productId);
-  res.json({ message: 'Item removed from cart', cart });
-});
-
-// Clear cart
-app.delete('/api/cart', (req, res) => {
-  cart = [];
-  res.json({ message: 'Cart cleared', cart });
-});
+// ==== PUBLIC ROUTES ====
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+// Get all products
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await getProducts();
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Get single product
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const products = await getProducts();
+    const product = products.find(p => p.id === parseInt(req.params.id));
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
+// Get products by category
+app.get('/api/products/category/:category', async (req, res) => {
+  try {
+    const products = await getProducts();
+    const categoryProducts = products.filter(p => p.category === req.params.category);
+    res.json(categoryProducts);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Get homepage settings
+app.get('/api/homepage', async (req, res) => {
+  try {
+    const homepage = await getHomepage();
+    res.json(homepage);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch homepage' });
+  }
+});
+
+// ==== ADMIN AUTH ROUTES ====
+
+// Admin login page
+app.get('/admin/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
+});
+
+// Admin login handler
+app.post('/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  try {
+    const valid = await checkAdminLogin(username, password);
+    if (valid) {
+      req.session.admin = true;
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Admin logout
+app.get('/admin/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/admin/login');
+  });
+});
+
+// Admin dashboard
+app.get('/admin', (req, res) => {
+  if (!req.session.admin) {
+    return res.redirect('/admin/login');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+});
+
+// ==== ADMIN API ROUTES ====
+
+// Get all products (admin)
+app.get('/api/admin/products', requireAuth, async (req, res) => {
+  try {
+    const products = await getProducts();
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Add product
+app.post('/api/admin/products', requireAuth, async (req, res) => {
+  const { name, description, price, category, stock, image_url, featured } = req.body;
+  
+  if (!name || price === undefined) {
+    return res.status(400).json({ error: 'Name and price required' });
+  }
+  
+  try {
+    const id = await addProduct({
+      name,
+      description: description || '',
+      price: parseFloat(price),
+      category: category || 'other',
+      stock: parseInt(stock) || 0,
+      image_url: image_url || '',
+      featured: featured ? 1 : 0
+    });
+    res.json({ id, success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add product' });
+  }
+});
+
+// Update product
+app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
+  const { name, description, price, category, stock, image_url, featured } = req.body;
+  
+  try {
+    await updateProduct(parseInt(req.params.id), {
+      name,
+      description: description || '',
+      price: parseFloat(price),
+      category: category || 'other',
+      stock: parseInt(stock) || 0,
+      image_url: image_url || '',
+      featured: featured ? 1 : 0
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// Delete product
+app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
+  try {
+    await deleteProduct(parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// Get homepage settings (admin)
+app.get('/api/admin/homepage', requireAuth, async (req, res) => {
+  try {
+    const homepage = await getHomepage();
+    res.json(homepage);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch homepage' });
+  }
+});
+
+// Update homepage settings
+app.put('/api/admin/homepage', requireAuth, async (req, res) => {
+  const { banner_title, banner_subtitle, intro_text, featured_product_ids } = req.body;
+  
+  try {
+    await updateHomepage({
+      banner_title: banner_title || 'Crystal Jewelz',
+      banner_subtitle: banner_subtitle || 'Handmade Jewelry',
+      intro_text: intro_text || '',
+      featured_product_ids: featured_product_ids || '[]'
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update homepage' });
+  }
+});
+
+// Update password
+app.put('/api/admin/password', requireAuth, async (req, res) => {
+  const { newPassword } = req.body;
+  
+  if (!newPassword || newPassword.length < 4) {
+    return res.status(400).json({ error: 'Password too short' });
+  }
+  
+  try {
+    await updateAdminPassword('admin', newPassword);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update password' });
+  }
+});
+
+// ==== FALLBACK ====
 
 // Serve index.html for all other routes
 app.get('*', (req, res) => {

@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Crystal Jewelz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .logout-btn {
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab-btn {
+            padding: 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            color: #7b1fa2;
+            border-bottom-color: #7b1fa2;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-danger {
+            background: #d32f2f;
+        }
+        
+        .product-form {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #7b1fa2;
+            box-shadow: 0 0 0 3px rgba(123,31,162,0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+        
+        .product-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .product-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .product-info {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .product-info h3 {
+            margin-bottom: 0.5rem;
+            color: #7b1fa2;
+        }
+        
+        .product-price {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #d4af37;
+            margin: 0.5rem 0;
+        }
+        
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .homepage-form {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .featured-products-list {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 2rem;
+        }
+        
+        .featured-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            gap: 1rem;
+        }
+        
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .product-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .product-actions {
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>💎 Admin Dashboard</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+    
+    <div class="container">
+        <div id="message"></div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('products')">Products</button>
+            <button class="tab-btn" onclick="switchTab('homepage')">Homepage</button>
+            <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+        </div>
+        
+        <!-- PRODUCTS TAB -->
+        <div id="products" class="tab-content active">
+            <div class="product-form">
+                <h2>Add New Product</h2>
+                <form id="productForm" onsubmit="handleAddProduct(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Product Name *</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Price *</label>
+                            <input type="number" name="price" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="bracelets">Bracelets</option>
+                                <option value="necklaces">Necklaces</option>
+                                <option value="rings">Rings</option>
+                                <option value="anklets">Anklets</option>
+                                <option value="earrings">Earrings</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock</label>
+                            <input type="number" name="stock" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="text" name="image_url" placeholder="https://...">
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="featured" id="featured">
+                        <label for="featured" style="margin: 0;">Featured on homepage</label>
+                    </div>
+                    
+                    <button type="submit" class="btn">Add Product</button>
+                </form>
+            </div>
+            
+            <div id="productList" class="product-list"></div>
+        </div>
+        
+        <!-- HOMEPAGE TAB -->
+        <div id="homepage" class="tab-content">
+            <div class="homepage-form">
+                <h2>Homepage Settings</h2>
+                <form id="homepageForm" onsubmit="handleHomepageUpdate(event)">
+                    <div class="form-group">
+                        <label>Banner Title</label>
+                        <input type="text" name="banner_title" placeholder="Crystal Jewelz">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Banner Subtitle</label>
+                        <input type="text" name="banner_subtitle" placeholder="Handmade Jewelry">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Intro Text</label>
+                        <textarea name="intro_text" placeholder="Welcome message..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn">Save Homepage</button>
+                </form>
+            </div>
+            
+            <div class="featured-products-list">
+                <h2>Featured Products</h2>
+                <p style="color: #999; margin-bottom: 1rem;">Check products in the Products tab to feature them on your homepage</p>
+                <div id="featuredList"></div>
+            </div>
+        </div>
+        
+        <!-- SETTINGS TAB -->
+        <div id="settings" class="tab-content">
+            <div class="product-form">
+                <h2>Change Password</h2>
+                <form id="passwordForm" onsubmit="handlePasswordChange(event)">
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" name="newPassword" required>
+                    </div>
+                    <button type="submit" class="btn">Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // Logout
+        function logout() {
+            fetch('/admin/logout').then(() => window.location.href = '/admin/login');
+        }
+        
+        // Message display
+        function showMessage(text, type = 'success') {
+            const el = document.getElementById('message');
+            el.className = `message ${type}`;
+            el.textContent = text;
+            setTimeout(() => el.textContent = '', 3000);
+        }
+        
+        // Load products
+        async function loadProducts() {
+            try {
+                const res = await fetch('/api/admin/products');
+                const products = await res.json();
+                
+                const html = products.map(p => `
+                    <div class="product-card">
+                        <div class="product-info">
+                            <h3>${p.name}</h3>
+                            <p>${p.description || 'No description'}</p>
+                            <p style="font-size: 0.9rem; color: #999;">${p.category} • Stock: ${p.stock}</p>
+                            <div class="product-price">$${p.price}</div>
+                            ${p.featured ? '<span style="background: #ffd700; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">Featured</span>' : ''}
+                        </div>
+                        <div class="product-actions">
+                            <button class="btn btn-secondary" onclick="editProduct(${p.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteProduct(${p.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('productList').innerHTML = html;
+            } catch (err) {
+                showMessage('Error loading products', 'error');
+            }
+        }
+        
+        // Add product
+        async function handleAddProduct(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const data = new FormData(form);
+            
+            try {
+                const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(Object.fromEntries(data))
+                });
+                
+                if (res.ok) {
+                    showMessage('Product added!', 'success');
+                    form.reset();
+                    loadProducts();
+                } else {
+                    showMessage('Error adding product', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+        
+        // Delete product
+        async function deleteProduct(id) {
+            if (!confirm('Delete this product?')) return;
+            
+            try {
+                const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showMessage('Product deleted!', 'success');
+                    loadProducts();
+                }
+            } catch (err) {
+                showMessage('Error deleting product', 'error');
+            }
+        }
+        
+        // Edit product (simplified - would need modal in real app)
+        function editProduct(id) {
+            alert('Edit feature coming soon');
+        }
+        
+        // Homepage update
+        async function handleHomepageUpdate(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            
+            try {
+                const res = await fetch('/api/admin/homepage', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    showMessage('Homepage updated!', 'success');
+                } else {
+                    showMessage('Error updating homepage', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+        
+        // Password change
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            
+            try {
+                const res = await fetch('/api/admin/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    showMessage('Password updated!', 'success');
+                    form.reset();
+                } else {
+                    showMessage('Error updating password', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+        
+        // Load homepage settings
+        async function loadHomepageSettings() {
+            try {
+                const res = await fetch('/api/admin/homepage');
+                const data = await res.json();
+                
+                document.querySelector('input[name="banner_title"]').value = data.banner_title || '';
+                document.querySelector('input[name="banner_subtitle"]').value = data.banner_subtitle || '';
+                document.querySelector('textarea[name="intro_text"]').value = data.intro_text || '';
+            } catch (err) {
+                console.error('Error loading homepage', err);
+            }
+        }
+        
+        // Initialize
+        loadProducts();
+        loadHomepageSettings();
+    </script>
+</body>
+</html>
