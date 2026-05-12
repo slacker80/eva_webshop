@@ -68,7 +68,6 @@
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.3s;
         }
         
         input[type="text"]:focus,
@@ -87,24 +86,28 @@
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
         }
         
-        .login-btn:active {
-            transform: scale(0.98);
+        .message {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        
+        .message.show {
+            display: block;
         }
         
         .error {
+            background: #ffebee;
             color: #d32f2f;
-            text-align: center;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
         }
         
         .success {
+            background: #e8f5e9;
             color: #388e3c;
-            text-align: center;
-            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -114,9 +117,9 @@
         <h1>Crystal Jewelz</h1>
         <p class="subtitle">Admin Panel</p>
         
-        <form id="loginForm">
-            <div id="message"></div>
-            
+        <div id="message" class="message"></div>
+        
+        <form method="POST" action="/admin/login-handler">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required placeholder="admin">
@@ -130,36 +133,5 @@
             <button type="submit" class="login-btn">Login</button>
         </form>
     </div>
-    
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const messageEl = document.getElementById('message');
-            
-            try {
-                const response = await fetch('/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    messageEl.innerHTML = '<p class="success">Login successful! Redirecting...</p>';
-                    setTimeout(() => window.location.href = '/admin', 500);
-                } else {
-                    messageEl.innerHTML = `<p class="error">${data.error || 'Login failed'}</p>`;
-                }
-            } catch (error) {
-                messageEl.innerHTML = '<p class="error">Connection error</p>';
-            }
-        });
-    </script>
 </body>
 </html>

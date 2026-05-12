@@ -462,9 +462,121 @@
             }
         }
         
-        // Edit product (simplified - would need modal in real app)
+        // Edit product (opens modal form)
         function editProduct(id) {
-            alert('Edit feature coming soon');
+            // Find product
+            fetch(`/api/admin/products/${id}`)
+                .then(res => res.json())
+                .then(product => {
+                    showEditModal(product);
+                })
+                .catch(err => showMessage('Error loading product', 'error'));
+        }
+        
+        // Show edit modal
+        function showEditModal(product) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+                    <h2 style="margin-bottom: 1rem;">Edit Product</h2>
+                    <form id="editProductForm" onsubmit="handleEditProduct(event, ${product.id})">
+                        <div class="form-group">
+                            <label>Product Name *</label>
+                            <input type="text" name="name" value="${product.name}" required>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Price *</label>
+                                <input type="number" name="price" step="0.01" value="${product.price}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Stock</label>
+                                <input type="number" name="stock" value="${product.stock}">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="bracelets" ${product.category === 'bracelets' ? 'selected' : ''}>Bracelets</option>
+                                <option value="necklaces" ${product.category === 'necklaces' ? 'selected' : ''}>Necklaces</option>
+                                <option value="rings" ${product.category === 'rings' ? 'selected' : ''}>Rings</option>
+                                <option value="anklets" ${product.category === 'anklets' ? 'selected' : ''}>Anklets</option>
+                                <option value="earrings" ${product.category === 'earrings' ? 'selected' : ''}>Earrings</option>
+                                <option value="other" ${product.category === 'other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="description">${product.description || ''}</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Image URL</label>
+                            <input type="text" name="image_url" value="${product.image_url || ''}">
+                        </div>
+                        
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" name="featured" id="editFeatured" ${product.featured ? 'checked' : ''}>
+                            <label for="editFeatured">Featured on homepage</label>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                            <button type="submit" class="btn">Update Product</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+        
+        // Close edit modal
+        function closeEditModal() {
+            const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 1000"]');
+            if (modal) modal.remove();
+        }
+        
+        // Handle edit product
+        async function handleEditProduct(e, productId) {
+            e.preventDefault();
+            
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            
+            try {
+                const res = await fetch(`/api/admin/products/${productId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    showMessage('Product updated!', 'success');
+                    closeEditModal();
+                    loadProducts();
+                } else {
+                    showMessage('Error updating product', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
         }
         
         // Homepage update
