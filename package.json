@@ -28,6 +28,7 @@
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {
-    "playwright": "^1.60.0"
+    "playwright": "^1.60.0",
+    "puppeteer": "^24.43.1"
   }
 }
