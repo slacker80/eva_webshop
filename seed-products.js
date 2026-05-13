@@ -11,13 +11,13 @@ const { db, initDatabase, addProduct } = require('./db-utils.js');
 const products = [
   // Bracelets
   { name: 'Crystal Healing Bracelet', description: 'Beautiful amethyst and rose quartz healing bracelet', price: 25, category: 'Bracelets', stock: 10, image_url: '/images/bracelet-1.jpg', featured: true },
-  { name: 'Beaded Charm Bracelet', description: 'Silver and gold accents with beaded charms', price: 18, category: 'Bracelets', stock: 8, image_url: '/images/bracelet-2.jpg', featured: false },
-  { name: 'Elastic Band Bracelet', description: 'Multi-color crystals on elastic band', price: 12, category: 'Bracelets', stock: 15, image_url: '/images/bracelet-3.jpg', featured: false },
+  { name: 'Beaded Charm Bracelet', description: 'Silver and gold accents with beaded charms', price: 18, category: 'Bracelets', stock: 8, image_url: '/images/bracelet-2.jpg', featured: true },
+  { name: 'Elastic Band Bracelet', description: 'Multi-color crystals on elastic band', price: 12, category: 'Bracelets', stock: 15, image_url: '/images/bracelet-3.jpg', featured: true },
   
   // Necklaces
   { name: 'Pendant Moonstone', description: 'Sterling silver chain with moonstone pendant', price: 35, category: 'Necklaces', stock: 6, image_url: '/images/necklace-1.jpg', featured: true },
-  { name: 'Layered Elegance', description: 'Gold-plated 3-strand layered necklace', price: 42, category: 'Necklaces', stock: 5, image_url: '/images/necklace-2.jpg', featured: false },
-  { name: 'Crystal Point Necklace', description: 'Raw crystal point on delicate chain', price: 28, category: 'Necklaces', stock: 9, image_url: '/images/necklace-3.jpg', featured: false },
+  { name: 'Layered Elegance', description: 'Gold-plated 3-strand layered necklace', price: 42, category: 'Necklaces', stock: 5, image_url: '/images/necklace-2.jpg', featured: true },
+  { name: 'Crystal Point Necklace', description: 'Raw crystal point on delicate chain', price: 28, category: 'Necklaces', stock: 9, image_url: '/images/necklace-3.jpg', featured: true },
   
   // Rings
   { name: 'Amethyst Cluster Ring', description: 'Adjustable amethyst cluster ring in silver', price: 22, category: 'Rings', stock: 12, image_url: '/images/ring-1.jpg', featured: false },
