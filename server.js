@@ -25,7 +25,7 @@ app.use(limiter);
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://crystaljewelz.nl'],
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://crystaljewelz.nl', 'http://77.42.93.211:3000'],
   credentials: true
 }));
 app.use(bodyParser.json());
