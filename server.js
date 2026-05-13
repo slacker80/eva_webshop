@@ -144,6 +144,15 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+app.get('/api/products/featured', async (req, res) => {
+  try {
+    const products = await getProducts();
+    res.json(products.filter(p => p.featured === 1));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
 app.get('/api/products/:id', async (req, res) => {
   try {
     const products = await getProducts();
@@ -162,16 +171,6 @@ app.get('/api/products/category/:category', async (req, res) => {
     const products = await getProducts();
     const categoryProducts = products.filter(p => p.category === req.params.category);
     res.json(categoryProducts);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch products' });
-  }
-});
-
-// Featured products API
-app.get('/api/products/featured', async (req, res) => {
-  try {
-    const products = await getProducts();
-    res.json(products.filter(p => p.featured === 1));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch products' });
   }
