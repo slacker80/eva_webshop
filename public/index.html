@@ -367,6 +367,7 @@
         document.addEventListener('DOMContentLoaded', loadProducts);
 
         async function loadProducts() {
+            console.log("[DEBUG] loadProducts starting");
             try {
                 const response = await fetch('/api/products');
                 products = await response.json();
