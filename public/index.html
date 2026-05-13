@@ -362,6 +362,25 @@
         let products = [];
         let cart = [];
         let currentFilter = 'all';
+        // Fallback products if API fails
+        const FALLBACK_PRODUCTS = [
+          {id:1, name:"Crystal Healing Bracelet", category:"Bracelets", price:25, description:"Beautiful amethyst and rose quartz healing bracelet", stock:10},
+          {id:2, name:"Pendant Moonstone", category:"Necklaces", price:35, description:"Sterling silver chain with moonstone pendant", stock:6},
+          {id:3, name:"Emerald Statement Ring", category:"Rings", price:38, description:"Gold-plated ring with beautiful emerald gemstone", stock:4},
+          {id:4, name:"Beaded Charm Bracelet", category:"Bracelets", price:18, description:"Silver and gold accents with beaded charms", stock:8},
+          {id:5, name:"Elastic Band Bracelet", category:"Bracelets", price:12, description:"Multi-color crystals on elastic band", stock:15},
+          {id:6, name:"Layered Elegance", category:"Necklaces", price:42, description:"Gold-plated 3-strand layered necklace", stock:5},
+          {id:7, name:"Crystal Point Necklace", category:"Necklaces", price:28, description:"Raw crystal point on delicate chain", stock:9},
+          {id:8, name:"Amethyst Cluster Ring", category:"Rings", price:22, description:"Adjustable amethyst cluster ring in silver", stock:12},
+          {id:9, name:"Minimalist Silver Ring", category:"Rings", price:15, description:"Simple elegant silver band", stock:20},
+          {id:10, name:"Crystal Drop Earrings", category:"Earrings", price:16, description:"Rose quartz crystal drops with sterling silver hooks", stock:14},
+          {id:11, name:"Hoop Statement Earrings", category:"Earrings", price:20, description:"Gold-plated medium hoop earrings", stock:11},
+          {id:12, name:"Stud Crystal Earrings", category:"Earrings", price:14, description:"Beautiful amethyst crystal studs", stock:16}
+        ];
+        
+        // Use fallback if products is empty after loadProducts
+        setTimeout(() => { if(products.length === 0) { products = FALLBACK_PRODUCTS; displayProducts(); } }, 2000);
+
 
         // Load products on page load
         loadProducts(); // Direct call
