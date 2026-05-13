@@ -43,6 +43,18 @@ function initDatabase() {
         if (err) reject(err);
       });
 
+      // Cart table (session-based)
+      db.run(`CREATE TABLE IF NOT EXISTS cart_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      )`, (err) => {
+        if (err) reject(err);
+      });
+
       // Admin users table
       db.run(`CREATE TABLE IF NOT EXISTS admin_users (
         id INTEGER PRIMARY KEY,
@@ -193,6 +205,83 @@ function updateAdminPassword(username, newPassword) {
   });
 }
 
+// Cart functions
+function getCart(sessionId) {
+  return new Promise((resolve, reject) => {
+    db.all(
+      `SELECT c.id, c.product_id, c.quantity, p.name, p.price, p.stock FROM cart_items c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? ORDER BY c.created_at DESC`,
+      [sessionId],
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      }
+    );
+  });
+}
+
+function addToCart(sessionId, productId, quantity) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      'SELECT id, quantity FROM cart_items WHERE session_id=? AND product_id=?',
+      [sessionId, productId],
+      (err, row) => {
+        if (err) return reject(err);
+        if (row) {
+          db.run(
+            'UPDATE cart_items SET quantity=quantity+? WHERE session_id=? AND product_id=?',
+            [quantity, sessionId, productId],
+            (err) => { if (err) reject(err); else resolve(); }
+          );
+        } else {
+          db.run(
+            'INSERT INTO cart_items (session_id, product_id, quantity) VALUES (?, ?, ?)',
+            [sessionId, productId, quantity],
+            (err) => { if (err) reject(err); else resolve(); }
+          );
+        }
+      }
+    );
+  });
+}
+
+function updateCartQuantity(sessionId, productId, quantity) {
+  return new Promise((resolve, reject) => {
+    if (quantity <= 0) {
+      db.run(
+        'DELETE FROM cart_items WHERE session_id=? AND product_id=?',
+        [sessionId, productId],
+        (err) => { if (err) reject(err); else resolve(); }
+      );
+    } else {
+      db.run(
+        'UPDATE cart_items SET quantity=? WHERE session_id=? AND product_id=?',
+        [quantity, sessionId, productId],
+        (err) => { if (err) reject(err); else resolve(); }
+      );
+    }
+  });
+}
+
+function removeFromCart(sessionId, productId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'DELETE FROM cart_items WHERE session_id=? AND product_id=?',
+      [sessionId, productId],
+      (err) => { if (err) reject(err); else resolve(); }
+    );
+  });
+}
+
+function clearCart(sessionId) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'DELETE FROM cart_items WHERE session_id=?',
+      [sessionId],
+      (err) => { if (err) reject(err); else resolve(); }
+    );
+  });
+}
+
 module.exports = {
   db,
   initDatabase,
@@ -203,5 +292,10 @@ module.exports = {
   getHomepage,
   updateHomepage,
   checkAdminLogin,
-  updateAdminPassword
+  updateAdminPassword,
+  getCart,
+  addToCart,
+  updateCartQuantity,
+  removeFromCart,
+  clearCart
 };

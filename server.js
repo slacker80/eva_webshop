@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
-const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword } = require('./db-utils');
+const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -119,7 +119,74 @@ app.get('/api/homepage', async (req, res) => {
   }
 });
 
-// ==== ADMIN AUTH ROUTES ====
+// ==== CART ROUTES ====
+
+app.get('/api/cart', async (req, res) => {
+  try {
+    const sessionId = req.sessionID;
+    const cart = await getCart(sessionId);
+    res.json(cart);
+  } catch (err) {
+    console.error('Error fetching cart:', err);
+    res.status(500).json({ error: 'Failed to fetch cart' });
+  }
+});
+
+app.post('/api/cart', async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+    const sessionId = req.sessionID;
+    if (!productId || !quantity) {
+      return res.status(400).json({ error: 'productId and quantity required' });
+    }
+    const products = await getProducts();
+    const product = products.find(p => p.id === parseInt(productId));
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    if (product.stock < quantity) {
+      return res.status(400).json({ error: 'Insufficient stock' });
+    }
+    await addToCart(sessionId, parseInt(productId), parseInt(quantity));
+    const updatedCart = await getCart(sessionId);
+    res.json(updatedCart);
+  } catch (err) {
+    console.error('Error adding to cart:', err);
+    res.status(500).json({ error: 'Failed to add to cart' });
+  }
+});
+
+app.put('/api/cart/:productId', async (req, res) => {
+  try {
+    const { quantity } = req.body;
+    const { productId } = req.params;
+    const sessionId = req.sessionID;
+    if (quantity === undefined) {
+      return res.status(400).json({ error: 'quantity required' });
+    }
+    await updateCartQuantity(sessionId, parseInt(productId), parseInt(quantity));
+    const updatedCart = await getCart(sessionId);
+    res.json(updatedCart);
+  } catch (err) {
+    console.error('Error updating cart:', err);
+    res.status(500).json({ error: 'Failed to update cart' });
+  }
+});
+
+app.delete('/api/cart/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const sessionId = req.sessionID;
+    await removeFromCart(sessionId, parseInt(productId));
+    const updatedCart = await getCart(sessionId);
+    res.json(updatedCart);
+  } catch (err) {
+    console.error('Error removing from cart:', err);
+    res.status(500).json({ error: 'Failed to remove from cart' });
+  }
+});
+
+// ==== ADMIN AUTH ROUTES ==== 
 
 app.get("/admin/login", checkAdminIP, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-login.html'));
