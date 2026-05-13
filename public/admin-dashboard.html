@@ -311,6 +311,7 @@
                     <div class="form-group">
                         <label>Image</label>
                         <input type="file" name="image_file" accept="image/*" onchange="uploadImage(this, 'image_url')" style="margin-bottom:0.5rem;">
+                        <div id="img_preview_add" style="margin-bottom:0.5rem; display:none;"><img src="" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                         <input type="text" name="image_url" id="image_url" placeholder="https://... or upload above">
                     </div>
                     
@@ -588,6 +589,7 @@
                         <div class="form-group">
                             <label>Image</label>
                             <input type="file" accept="image/*" onchange="uploadImage(this, 'edit_image_url')" style="margin-bottom:0.5rem;">
+                            <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${product.image_url || ''}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                             <input type="text" name="image_url" id="edit_image_url" value="${product.image_url || ''}">
                         </div>
                         
@@ -664,6 +666,19 @@
         async function uploadImage(input, targetFieldId) {
             const file = input.files[0];
             if (!file) return;
+            
+            // Show preview immediately (before upload)
+            const previewId = targetFieldId === 'image_url' ? 'img_preview_add' : 'img_preview_edit';
+            const previewDiv = document.getElementById(previewId);
+            if (previewDiv) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewDiv.querySelector('img').src = e.target.result;
+                    previewDiv.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+            
             const formData = new FormData();
             formData.append('image', file);
             try {
