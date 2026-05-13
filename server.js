@@ -415,7 +415,7 @@ app.get("/admin", checkAdminIP, (req, res) => {
 
 // ==== ADMIN API ROUTES ====
 
-app.get('/api/admin/products', requireAuth, csrfProtection, async (req, res) => {
+app.get('/api/admin/products', requireAuth, async (req, res) => {
   try {
     const products = await getProducts();
     res.json(products);
@@ -424,7 +424,7 @@ app.get('/api/admin/products', requireAuth, csrfProtection, async (req, res) => 
   }
 });
 
-app.post('/api/admin/products', requireAuth, csrfProtection, async (req, res) => {
+app.post('/api/admin/products', requireAuth, async (req, res) => {
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   if (!name || price === undefined) {
@@ -448,7 +448,7 @@ app.post('/api/admin/products', requireAuth, csrfProtection, async (req, res) =>
   }
 });
 
-app.put('/api/admin/products/:id', requireAuth, csrfProtection, async (req, res) => {
+app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   try {
@@ -467,7 +467,7 @@ app.put('/api/admin/products/:id', requireAuth, csrfProtection, async (req, res)
   }
 });
 
-app.delete('/api/admin/products/:id', requireAuth, csrfProtection, async (req, res) => {
+app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
   try {
     await deleteProduct(parseInt(req.params.id));
     res.json({ success: true });
@@ -485,7 +485,7 @@ app.get('/api/admin/homepage', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/admin/homepage', requireAuth, csrfProtection, async (req, res) => {
+app.put('/api/admin/homepage', requireAuth, async (req, res) => {
   const { banner_title, banner_subtitle, intro_text, featured_product_ids } = req.body;
   
   try {
@@ -501,7 +501,7 @@ app.put('/api/admin/homepage', requireAuth, csrfProtection, async (req, res) => 
   }
 });
 
-app.put('/api/admin/password', requireAuth, csrfProtection, async (req, res) => {
+app.put('/api/admin/password', requireAuth, async (req, res) => {
   const { newPassword } = req.body;
   
   if (!newPassword || newPassword.length < 4) {
