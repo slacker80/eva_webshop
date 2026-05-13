@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
+const multer = require('multer');
 const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
 
 const app = express();
@@ -115,6 +117,32 @@ app.get('/', async (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// File uploads (multer)
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadDir));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const name = Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+    cb(null, name);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|svg/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    cb(null, ext && mime);
+  }
+});
 
 // IP whitelist for admin access
 const ADMIN_IP_WHITELIST = ["77.162.108.225", "127.0.0.1", "localhost"];
@@ -440,6 +468,18 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
   }
 });
 
+// GET single product for editing
+app.get('/api/admin/products/:id', requireAuth, async (req, res) => {
+  try {
+    const products = await getProducts();
+    const product = products.find(p => p.id === parseInt(req.params.id));
+    if (!product) return res.status(404).json({ error: 'Not found' });
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch product' });
+  }
+});
+
 app.post('/api/admin/products', requireAuth, async (req, res) => {
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
@@ -490,6 +530,14 @@ app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete product' });
   }
+});
+
+// Image upload endpoint
+app.post('/api/admin/upload', requireAuth, upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  res.json({ url: '/uploads/' + req.file.filename });
 });
 
 app.get('/api/admin/homepage', requireAuth, async (req, res) => {
