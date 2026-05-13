@@ -60,7 +60,7 @@ const csrfProtection = csrf({ cookie: true });
 // Homepage — shows featured products only
 app.get('/', async (req, res) => {
   try {
-    const products = await getProducts();
+    const [products, hp] = await Promise.all([getProducts(), getHomepage()]);
     const featured = products.filter(p => p.featured === 1);
     
     const productCards = featured.map(p => `
@@ -76,31 +76,31 @@ app.get('/', async (req, res) => {
 
     const content = `
             <div class="hero">
-                <h1>✨ Handcrafted Crystal Jewelry</h1>
-                <p>Discover our beautiful collection of handcrafted crystal jewelry. Each piece is made with love and positive energy.</p>
+                <h1>${hp.hero_title}</h1>
+                <p>${hp.hero_subtitle}</p>
             </div>
 
             <div class="about-section">
                 <div class="about-card">
-                    <div class="icon">💎</div>
-                    <h3>Authentic Crystals</h3>
-                    <p>Every piece features genuine, ethically sourced crystals handpicked for quality and beauty.</p>
+                    <div class="icon">${hp.about1_icon}</div>
+                    <h3>${hp.about1_title}</h3>
+                    <p>${hp.about1_text}</p>
                 </div>
                 <div class="about-card">
-                    <div class="icon">🤲</div>
-                    <h3>Handcrafted With Care</h3>
-                    <p>Each jewelry piece is carefully handcrafted by our skilled artisans with attention to every detail.</p>
+                    <div class="icon">${hp.about2_icon}</div>
+                    <h3>${hp.about2_title}</h3>
+                    <p>${hp.about2_text}</p>
                 </div>
                 <div class="about-card">
-                    <div class="icon">🌍</div>
-                    <h3>Sustainable & Ethical</h3>
-                    <p>We are committed to sustainable practices and ethical sourcing for all our materials.</p>
+                    <div class="icon">${hp.about3_icon}</div>
+                    <h3>${hp.about3_title}</h3>
+                    <p>${hp.about3_text}</p>
                 </div>
             </div>
 
             <div class="category-header">
-                <h1>🌟 Featured Products</h1>
-                <p class="category-count">${featured.length} handpicked pieces</p>
+                <h1>${hp.featured_title}</h1>
+                <p class="category-count">${featured.length} ${hp.featured_subtitle}</p>
             </div>
 
             <div class="products-grid">
@@ -109,6 +109,7 @@ app.get('/', async (req, res) => {
 
     res.send(renderPage('Handcrafted Crystal Jewelry', content, '/'));
   } catch (err) {
+    console.error('Homepage error:', err);
     res.status(500).send(renderPage('Error', '<p>Something went wrong.</p>'));
   }
 });
@@ -501,15 +502,16 @@ app.get('/api/admin/homepage', requireAuth, async (req, res) => {
 });
 
 app.put('/api/admin/homepage', requireAuth, async (req, res) => {
-  const { banner_title, banner_subtitle, intro_text, featured_product_ids } = req.body;
+  const fields = [
+    'hero_title','hero_subtitle',
+    'about1_icon','about1_title','about1_text',
+    'about2_icon','about2_title','about2_text',
+    'about3_icon','about3_title','about3_text',
+    'featured_title','featured_subtitle'
+  ];
   
   try {
-    await updateHomepage({
-      banner_title: banner_title || 'Crystal Jewelz',
-      banner_subtitle: banner_subtitle || 'Handmade Jewelry',
-      intro_text: intro_text || '',
-      featured_product_ids: featured_product_ids || '[]'
-    });
+    await updateHomepage(req.body);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update homepage' });

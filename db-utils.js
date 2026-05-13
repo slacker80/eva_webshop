@@ -35,12 +35,22 @@ function initDatabase() {
       // Homepage settings table
       db.run(`CREATE TABLE IF NOT EXISTS homepage (
         id INTEGER PRIMARY KEY,
-        banner_title TEXT DEFAULT 'Crystal Jewelz',
-        banner_subtitle TEXT DEFAULT 'Handmade Jewelry',
-        intro_text TEXT DEFAULT 'Beautiful handcrafted jewelry for every occasion',
-        featured_product_ids TEXT DEFAULT '[]'
+        hero_title TEXT DEFAULT '✨ Handcrafted Crystal Jewelry',
+        hero_subtitle TEXT DEFAULT 'Discover our beautiful collection of handcrafted crystal jewelry. Each piece is made with love and positive energy.',
+        about1_icon TEXT DEFAULT '💎',
+        about1_title TEXT DEFAULT 'Authentic Crystals',
+        about1_text TEXT DEFAULT 'Every piece features genuine, ethically sourced crystals handpicked for quality and beauty.',
+        about2_icon TEXT DEFAULT '🤲',
+        about2_title TEXT DEFAULT 'Handcrafted With Care',
+        about2_text TEXT DEFAULT 'Each jewelry piece is carefully handcrafted by our skilled artisans with attention to every detail.',
+        about3_icon TEXT DEFAULT '🌍',
+        about3_title TEXT DEFAULT 'Sustainable & Ethical',
+        about3_text TEXT DEFAULT 'We are committed to sustainable practices and ethical sourcing for all our materials.',
+        featured_title TEXT DEFAULT '🌟 Featured Products',
+        featured_subtitle TEXT DEFAULT 'handpicked pieces'
       )`, (err) => {
         if (err) reject(err);
+        else migrateHomepage().then(resolve).catch(reject);
       });
 
       // Cart table (session-based)
@@ -106,6 +116,47 @@ function generateSecurePassword() {
   return password;
 }
 
+// Migrate homepage table: add new columns if they don't exist
+function migrateHomepage() {
+  const cols = [
+    { name: 'hero_title', def: "'✨ Handcrafted Crystal Jewelry'" },
+    { name: 'hero_subtitle', def: "'Discover our beautiful collection of handcrafted crystal jewelry. Each piece is made with love and positive energy.'" },
+    { name: 'about1_icon', def: "'💎'" },
+    { name: 'about1_title', def: "'Authentic Crystals'" },
+    { name: 'about1_text', def: "'Every piece features genuine, ethically sourced crystals handpicked for quality and beauty.'" },
+    { name: 'about2_icon', def: "'🤲'" },
+    { name: 'about2_title', def: "'Handcrafted With Care'" },
+    { name: 'about2_text', def: "'Each jewelry piece is carefully handcrafted by our skilled artisans with attention to every detail.'" },
+    { name: 'about3_icon', def: "'🌍'" },
+    { name: 'about3_title', def: "'Sustainable & Ethical'" },
+    { name: 'about3_text', def: "'We are committed to sustainable practices and ethical sourcing for all our materials.'" },
+    { name: 'featured_title', def: "'🌟 Featured Products'" },
+    { name: 'featured_subtitle', def: "'handpicked pieces'" },
+  ];
+
+  return new Promise((resolve, reject) => {
+    db.all("PRAGMA table_info(homepage)", (err, rows) => {
+      if (err) return reject(err);
+      const existing = rows.map(r => r.name);
+      const pending = cols.filter(c => !existing.includes(c.name));
+      
+      if (pending.length === 0) return resolve();
+      
+      db.serialize(() => {
+        for (const col of pending) {
+          db.run(`ALTER TABLE homepage ADD COLUMN ${col.name} TEXT DEFAULT ${col.def}`);
+        }
+      });
+      
+      // Ensure row 1 exists with defaults
+      db.run('INSERT OR IGNORE INTO homepage (id) VALUES (1)', (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  });
+}
+
 // Product functions
 function getProducts() {
   return new Promise((resolve, reject) => {
@@ -157,11 +208,13 @@ function getHomepage() {
     db.get('SELECT * FROM homepage WHERE id=1', (err, row) => {
       if (err) reject(err);
       else resolve(row || {
-        id: 1,
-        banner_title: 'Crystal Jewelz',
-        banner_subtitle: 'Handmade Jewelry',
-        intro_text: 'Beautiful handcrafted jewelry for every occasion',
-        featured_product_ids: '[]'
+        hero_title: '✨ Handcrafted Crystal Jewelry',
+        hero_subtitle: 'Discover our beautiful collection of handcrafted crystal jewelry. Each piece is made with love and positive energy.',
+        about1_icon: '💎', about1_title: 'Authentic Crystals', about1_text: 'Every piece features genuine, ethically sourced crystals handpicked for quality and beauty.',
+        about2_icon: '🤲', about2_title: 'Handcrafted With Care', about2_text: 'Each jewelry piece is carefully handcrafted by our skilled artisans with attention to every detail.',
+        about3_icon: '🌍', about3_title: 'Sustainable & Ethical', about3_text: 'We are committed to sustainable practices and ethical sourcing for all our materials.',
+        featured_title: '🌟 Featured Products',
+        featured_subtitle: 'handpicked pieces',
       });
     });
   });
@@ -169,9 +222,19 @@ function getHomepage() {
 
 function updateHomepage(data) {
   return new Promise((resolve, reject) => {
+    const fields = [
+      'hero_title','hero_subtitle',
+      'about1_icon','about1_title','about1_text',
+      'about2_icon','about2_title','about2_text',
+      'about3_icon','about3_title','about3_text',
+      'featured_title','featured_subtitle'
+    ];
+    const setParts = fields.map(f => `${f}=?`).join(', ');
+    const values = fields.map(f => data[f] || '');
+    
     db.run(
-      'INSERT OR REPLACE INTO homepage (id, banner_title, banner_subtitle, intro_text, featured_product_ids) VALUES (1, ?, ?, ?, ?)',
-      [data.banner_title, data.banner_subtitle, data.intro_text, data.featured_product_ids],
+      `INSERT OR REPLACE INTO homepage (id, ${fields.join(', ')}) VALUES (1, ${values.map(() => '?').join(', ')})`,
+      values,
       (err) => {
         if (err) reject(err);
         else resolve();

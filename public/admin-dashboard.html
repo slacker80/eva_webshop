@@ -327,29 +327,85 @@
         
         <!-- HOMEPAGE TAB -->
         <div id="homepage" class="tab-content">
-            <div class="homepage-form">
-                <h2>Homepage Settings</h2>
-                <form id="homepageForm" onsubmit="handleHomepageUpdate(event)">
-                    <div class="form-group">
-                        <label>Banner Title</label>
-                        <input type="text" name="banner_title" placeholder="Crystal Jewelz">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <!-- EDIT FORM -->
+                <div class="product-form">
+                    <h2>Homepage Editor</h2>
+                    <form id="homepageForm" onsubmit="handleHomepageUpdate(event)">
+                        <h3 style="margin-top:1rem; color:#7b1fa2;">Hero Section</h3>
+                        <div class="form-group">
+                            <label>Hero Title</label>
+                            <input type="text" name="hero_title" id="ef_hero_title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Hero Subtitle</label>
+                            <textarea name="hero_subtitle" id="ef_hero_subtitle" rows="2"></textarea>
+                        </div>
+                        
+                        <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 1</h3>
+                        <div class="form-row">
+                            <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about1_icon" id="ef_about1_icon"></div>
+                            <div class="form-group"><label>Title</label><input type="text" name="about1_title" id="ef_about1_title"></div>
+                        </div>
+                        <div class="form-group"><label>Text</label><textarea name="about1_text" id="ef_about1_text" rows="2"></textarea></div>
+                        
+                        <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 2</h3>
+                        <div class="form-row">
+                            <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about2_icon" id="ef_about2_icon"></div>
+                            <div class="form-group"><label>Title</label><input type="text" name="about2_title" id="ef_about2_title"></div>
+                        </div>
+                        <div class="form-group"><label>Text</label><textarea name="about2_text" id="ef_about2_text" rows="2"></textarea></div>
+                        
+                        <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 3</h3>
+                        <div class="form-row">
+                            <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about3_icon" id="ef_about3_icon"></div>
+                            <div class="form-group"><label>Title</label><input type="text" name="about3_title" id="ef_about3_title"></div>
+                        </div>
+                        <div class="form-group"><label>Text</label><textarea name="about3_text" id="ef_about3_text" rows="2"></textarea></div>
+                        
+                        <h3 style="margin-top:1.5rem; color:#7b1fa2;">Featured Section</h3>
+                        <div class="form-group"><label>Title</label><input type="text" name="featured_title" id="ef_featured_title"></div>
+                        <div class="form-group"><label>Subtitle suffix (e.g. "handpicked pieces")</label><input type="text" name="featured_subtitle" id="ef_featured_subtitle"></div>
+                        
+                        <button type="submit" class="btn" style="width:100%; margin-top:1rem;">💾 Save All</button>
+                    </form>
+                </div>
+                
+                <!-- LIVE PREVIEW -->
+                <div>
+                    <h2 style="margin-bottom:1rem;">Live Preview</h2>
+                    <div id="homepagePreview" style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 1rem; background: white; max-height: 700px; overflow-y: auto;">
+                        <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 50%, #ffecb3 100%); padding: 2rem 1rem; text-align: center; margin-bottom: 1rem; border-radius: 8px;">
+                            <h1 id="pv_hero_title" style="font-size:1.5rem; color:#4a148c;"></h1>
+                            <p id="pv_hero_subtitle" style="color:#666;"></p>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                            <div style="text-align:center; padding:1rem; background:#fafafa; border-radius:8px;">
+                                <div style="font-size:2rem;" id="pv_about1_icon"></div>
+                                <h4 style="color:#4a148c;" id="pv_about1_title"></h4>
+                                <p style="font-size:0.8rem; color:#666;" id="pv_about1_text"></p>
+                            </div>
+                            <div style="text-align:center; padding:1rem; background:#fafafa; border-radius:8px;">
+                                <div style="font-size:2rem;" id="pv_about2_icon"></div>
+                                <h4 style="color:#4a148c;" id="pv_about2_title"></h4>
+                                <p style="font-size:0.8rem; color:#666;" id="pv_about2_text"></p>
+                            </div>
+                            <div style="text-align:center; padding:1rem; background:#fafafa; border-radius:8px;">
+                                <div style="font-size:2rem;" id="pv_about3_icon"></div>
+                                <h4 style="color:#4a148c;" id="pv_about3_title"></h4>
+                                <p style="font-size:0.8rem; color:#666;" id="pv_about3_text"></p>
+                            </div>
+                        </div>
+                        <div style="text-align:center; border-bottom:2px solid #e0e0e0; padding-bottom:0.5rem; margin-bottom:0.5rem;">
+                            <h2 style="color:#4a148c;" id="pv_featured_title"></h2>
+                            <p style="color:#999; font-size:0.85rem;"><span id="pv_featured_count">0</span> <span id="pv_featured_subtitle"></span></p>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Banner Subtitle</label>
-                        <input type="text" name="banner_subtitle" placeholder="Handmade Jewelry">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Intro Text</label>
-                        <textarea name="intro_text" placeholder="Welcome message..."></textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn">Save Homepage</button>
-                </form>
+                    <p style="margin-top:0.5rem; color:#999; font-size:0.8rem;">💡 Type in the form → preview updates live</p>
+                </div>
             </div>
             
-            <div class="featured-products-list">
+            <div class="featured-products-list" style="margin-top:2rem;">
                 <h2>Featured Products</h2>
                 <p style="color: #999; margin-bottom: 1rem;">Check products in the Products tab to feature them on your homepage</p>
                 <div id="featuredList"></div>
@@ -584,19 +640,16 @@
         // Homepage update
         async function handleHomepageUpdate(e) {
             e.preventDefault();
-            
             const form = e.target;
             const data = Object.fromEntries(new FormData(form));
-            
             try {
                 const res = await fetch('/api/admin/homepage', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
                 if (res.ok) {
-                    showMessage('Homepage updated!', 'success');
+                    showMessage('✅ Homepage saved! View at <a href="/" target="_blank">crystaljewelz.nl</a>', 'success');
                 } else {
                     showMessage('Error updating homepage', 'error');
                 }
@@ -605,42 +658,80 @@
             }
         }
         
+        // Load homepage settings + live preview
+        async function loadHomepageSettings() {
+            try {
+                const res = await fetch('/api/admin/homepage');
+                const hp = await res.json();
+                
+                const fields = ['hero_title','hero_subtitle',
+                    'about1_icon','about1_title','about1_text',
+                    'about2_icon','about2_title','about2_text',
+                    'about3_icon','about3_title','about3_text',
+                    'featured_title','featured_subtitle'];
+                
+                // Fill form fields
+                for (const f of fields) {
+                    const el = document.getElementById('ef_' + f);
+                    if (el) el.value = hp[f] || '';
+                }
+                
+                // Update live preview
+                updatePreview(hp);
+                
+                // Live preview: bind input events
+                for (const f of fields) {
+                    const el = document.getElementById('ef_' + f);
+                    if (el) el.addEventListener('input', () => {
+                        hp[f] = el.value;
+                        updatePreview(hp);
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading homepage', err);
+            }
+        }
+        
+        function updatePreview(hp) {
+            document.getElementById('pv_hero_title').textContent = hp.hero_title || '';
+            document.getElementById('pv_hero_subtitle').textContent = hp.hero_subtitle || '';
+            document.getElementById('pv_about1_icon').textContent = hp.about1_icon || '';
+            document.getElementById('pv_about1_title').textContent = hp.about1_title || '';
+            document.getElementById('pv_about1_text').textContent = hp.about1_text || '';
+            document.getElementById('pv_about2_icon').textContent = hp.about2_icon || '';
+            document.getElementById('pv_about2_title').textContent = hp.about2_title || '';
+            document.getElementById('pv_about2_text').textContent = hp.about2_text || '';
+            document.getElementById('pv_about3_icon').textContent = hp.about3_icon || '';
+            document.getElementById('pv_about3_title').textContent = hp.about3_title || '';
+            document.getElementById('pv_about3_text').textContent = hp.about3_text || '';
+            document.getElementById('pv_featured_title').textContent = hp.featured_title || '';
+            document.getElementById('pv_featured_subtitle').textContent = hp.featured_subtitle || 'items';
+            
+            // Update featured count
+            fetch('/api/products/featured').then(r => r.json()).then(p => {
+                document.getElementById('pv_featured_count').textContent = p.length;
+            });
+        }
+        
         // Password change
         async function handlePasswordChange(e) {
             e.preventDefault();
-            
             const form = e.target;
             const data = Object.fromEntries(new FormData(form));
-            
             try {
                 const res = await fetch('/api/admin/password', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
                 if (res.ok) {
-                    showMessage('Password updated!', 'success');
+                    showMessage('✅ Password updated!', 'success');
                     form.reset();
                 } else {
                     showMessage('Error updating password', 'error');
                 }
             } catch (err) {
                 showMessage('Connection error', 'error');
-            }
-        }
-        
-        // Load homepage settings
-        async function loadHomepageSettings() {
-            try {
-                const res = await fetch('/api/admin/homepage');
-                const data = await res.json();
-                
-                document.querySelector('input[name="banner_title"]').value = data.banner_title || '';
-                document.querySelector('input[name="banner_subtitle"]').value = data.banner_subtitle || '';
-                document.querySelector('textarea[name="intro_text"]').value = data.intro_text || '';
-            } catch (err) {
-                console.error('Error loading homepage', err);
             }
         }
         
