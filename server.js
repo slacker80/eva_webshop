@@ -67,6 +67,7 @@ app.get('/', async (req, res) => {
     
     const productCards = featured.map(p => `
                 <div class="product-card">
+                    ${p.image_url ? `<div class="product-image"><img src="${p.image_url}" alt="${p.name}" loading="lazy"></div>` : ''}
                     <div class="product-name">${p.name}</div>
                     <div class="product-category">${p.category}</div>
                     <div class="product-description">${p.description}</div>
@@ -258,6 +259,8 @@ function renderPage(title, content, activeCat = '') {
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
         .product-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; }
         .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+        .product-image { width: 100%; height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f0f0f0; }
+        .product-image img { width: 100%; height: 100%; object-fit: cover; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; }
         .product-category { display: inline-block; background: rgba(123, 31, 162, 0.1); color: #7b1fa2; padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
         .product-description { color: #718096; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.5; }
@@ -317,6 +320,7 @@ CATEGORIES.forEach(cat => {
       
       const productCards = categoryProducts.map(p => `
                 <div class="product-card">
+                    ${p.image_url ? `<div class="product-image"><img src="${p.image_url}" alt="${p.name}" loading="lazy"></div>` : ''}
                     <div class="product-name">${p.name}</div>
                     <div class="product-category">${p.category}</div>
                     <div class="product-description">${p.description}</div>
