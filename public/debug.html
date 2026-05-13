@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Console</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .log { margin: 5px 0; padding: 5px; background: #2d2d2d; border-left: 3px solid #0e639c; }
+        .error { border-left-color: #d97706; }
+        .success { border-left-color: #10b981; }
+        h1 { color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 WebShop Debug Console</h1>
+    <div id="logs"></div>
+
+    <script>
+        const logs = [];
+        
+        function log(msg, type = 'info') {
+            const entry = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.push({ msg: entry, type });
+            console.log(entry);
+            updateUI();
+        }
+        
+        function updateUI() {
+            const html = logs.map(l => 
+                `<div class="log ${l.type}">${l.msg}</div>`
+            ).join('');
+            document.getElementById('logs').innerHTML = html;
+            document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+        }
+        
+        async function diagnose() {
+            log('🚀 Diagnostic starting...', 'info');
+            
+            // Check window.location
+            log(`📍 URL: ${window.location.href}`, 'info');
+            log(`📍 Origin: ${window.location.origin}`, 'info');
+            
+            // Try fetch
+            log('🔄 Attempting fetch(/api/products)...', 'info');
+            try {
+                const resp = await fetch('/api/products');
+                log(`✅ Fetch succeeded: HTTP ${resp.status}`, 'success');
+                
+                const data = await resp.json();
+                log(`✅ JSON parse OK: ${data.length} products`, 'success');
+                
+                if (data.length > 0) {
+                    log(`📦 First product: ${data[0].name} ($${data[0].price})`, 'success');
+                }
+                
+            } catch (err) {
+                log(`❌ Fetch FAILED: ${err.message}`, 'error');
+                log(`❌ Stack: ${err.stack.substring(0, 100)}`, 'error');
+            }
+            
+            // Check document.getElementById
+            log(`📄 document.getElementById('productsContainer'): ${document.getElementById('productsContainer') ? '✅ Found' : '❌ NOT FOUND'}`, 'info');
+            
+            // Check window.products variable
+            log(`🔍 window.products: ${window.products ? 'exists, length=' + window.products.length : 'undefined'}`, 'info');
+            
+            // Try loadProducts manually
+            log('🔄 Calling window.loadProducts()...', 'info');
+            if (typeof window.loadProducts === 'function') {
+                await window.loadProducts();
+                log(`✅ loadProducts() executed`, 'success');
+            } else {
+                log(`❌ loadProducts not found in window`, 'error');
+            }
+        }
+        
+        window.addEventListener('load', diagnose);
+    </script>
+</body>
+</html>
