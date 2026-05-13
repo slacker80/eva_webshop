@@ -88,6 +88,7 @@
         }
         
         .filter-btn {
+            display: inline-block;
             padding: 0.5rem 1rem;
             border: 2px solid #7b1fa2;
             background: white;
@@ -96,6 +97,7 @@
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 500;
+            text-decoration: none;
         }
         
         .filter-btn:hover, .filter-btn.active {
@@ -311,12 +313,11 @@
             </div>
 
             <div class="filters">
-                <button class="filter-btn active" onclick="filterProducts('all')">All Products</button>
-                <button class="filter-btn" onclick="filterProducts('bracelets')">Bracelets</button>
-                <button class="filter-btn" onclick="filterProducts('necklaces')">Necklaces</button>
-                <button class="filter-btn" onclick="filterProducts('rings')">Rings</button>
-                <button class="filter-btn" onclick="filterProducts('anklets')">Anklets</button>
-                <button class="filter-btn" onclick="filterProducts('earrings')">Earrings</button>
+                <a href="/" class="filter-btn active">All Products</a>
+                <a href="/bracelets" class="filter-btn">Bracelets</a>
+                <a href="/necklaces" class="filter-btn">Necklaces</a>
+                <a href="/rings" class="filter-btn">Rings</a>
+                <a href="/earrings" class="filter-btn">Earrings</a>
             </div>
 
             <div id="productsContainer" class="products-grid">

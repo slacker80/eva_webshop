@@ -110,6 +110,71 @@ app.get('/api/products/category/:category', async (req, res) => {
   }
 });
 
+// Category pages (server-side rendered)
+const CATEGORIES = ['bracelets', 'necklaces', 'rings', 'earrings', 'anklets'];
+CATEGORIES.forEach(cat => {
+  app.get(`/${cat}`, async (req, res) => {
+    try {
+      const products = await getProducts();
+      const categoryProducts = products.filter(p => p.category.toLowerCase() === cat.toLowerCase());
+      const catTitle = cat.charAt(0).toUpperCase() + cat.slice(1);
+      
+      const productCards = categoryProducts.map(p => `
+        <div class="product-card">
+          <div class="product-name">${p.name}</div>
+          <div class="product-category">${p.category}</div>
+          <div class="product-description">${p.description}</div>
+          <div class="product-footer">
+            <div class="product-price">$${p.price}</div>
+            <button class="add-btn">Add to Cart</button>
+          </div>
+        </div>`).join('');
+      
+      res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Jewelz - ${catTitle}</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">💎 Crystal Jewelz</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <nav class="category-nav">
+                <a href="/" class="filter-btn">All Products</a>
+                <a href="/bracelets" class="filter-btn${cat === 'bracelets' ? ' active' : ''}">Bracelets</a>
+                <a href="/necklaces" class="filter-btn${cat === 'necklaces' ? ' active' : ''}">Necklaces</a>
+                <a href="/rings" class="filter-btn${cat === 'rings' ? ' active' : ''}">Rings</a>
+                <a href="/earrings" class="filter-btn${cat === 'earrings' ? ' active' : ''}">Earrings</a>
+            </nav>
+
+            <section class="category-header">
+                <h1>✨ ${catTitle}</h1>
+                <p class="category-count">${categoryProducts.length} products</p>
+            </section>
+
+            <div class="products-grid">
+                ${productCards}
+            </div>
+        </div>
+    </main>
+</body>
+</html>`);
+    } catch (err) {
+      res.status(500).send('<p>Failed to load products</p>');
+    }
+  });
+});
+
 app.get('/api/homepage', async (req, res) => {
   try {
     const homepage = await getHomepage();
