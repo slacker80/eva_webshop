@@ -485,6 +485,7 @@ app.get('/api/admin/products/:id', requireAuth, async (req, res) => {
 });
 
 app.post('/api/admin/products', requireAuth, async (req, res) => {
+  console.log('POST /api/admin/products body:', JSON.stringify(req.body));
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   if (!name || price === undefined) {
@@ -509,6 +510,7 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
 });
 
 app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
+  console.log('PUT /api/admin/products/:id body:', JSON.stringify(req.body));
   const { name, description, price, category, stock, image_url, featured } = req.body;
   
   try {

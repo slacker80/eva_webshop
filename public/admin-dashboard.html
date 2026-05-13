@@ -310,7 +310,7 @@
                     
                     <div class="form-group">
                         <label>Image</label>
-                        <input type="file" name="image_file" accept="image/*" onchange="uploadImage(this, 'image_url')" style="margin-bottom:0.5rem;">
+                        <input type="file" accept="image/*" onchange="uploadImage(this, 'image_url')" style="margin-bottom:0.5rem;">
                         <div id="img_preview_add" style="margin-bottom:0.5rem; display:none;"><img src="" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                         <input type="text" name="image_url" id="image_url" placeholder="https://... or upload above">
                     </div>
@@ -683,24 +683,25 @@
             _isUploading = true;
             document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = true);
             
-            // Show local preview immediately
             const previewId = targetFieldId === 'image_url' ? 'img_preview_add' : 'img_preview_edit';
             const previewDiv = document.getElementById(previewId);
+            
+            // Clear old status + set up status element
+            let statusEl = null;
             if (previewDiv) {
+                // Remove any stale status
+                previewDiv.querySelectorAll('.upload-status').forEach(s => s.remove());
+                previewDiv.style.display = 'block';
+                previewDiv.style.position = 'relative';
+                statusEl = document.createElement('div');
+                statusEl.className = 'upload-status';
+                statusEl.style.cssText = 'position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:4px;font-size:12px;z-index:5;';
+                statusEl.textContent = '⬆ Uploading...';
+                previewDiv.appendChild(statusEl);
+                
+                // Local preview
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewDiv.querySelector('img').src = e.target.result;
-                    previewDiv.style.display = 'block';
-                    // Show uploading overlay
-                    if (!previewDiv.querySelector('.upload-status')) {
-                        const status = document.createElement('div');
-                        status.className = 'upload-status';
-                        status.style.cssText = 'position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:4px;font-size:12px;';
-                        status.textContent = '⬆ Uploading...';
-                        previewDiv.style.position = 'relative';
-                        previewDiv.appendChild(status);
-                    }
-                };
+                reader.onload = (e) => { previewDiv.querySelector('img').src = e.target.result; };
                 reader.readAsDataURL(file);
             }
             
@@ -711,19 +712,20 @@
                 const data = await res.json();
                 if (data.url) {
                     document.getElementById(targetFieldId).value = data.url;
-                    // Remove uploading overlay
-                    const status = previewDiv?.querySelector('.upload-status');
-                    if (status) status.textContent = '✅ Uploaded!';
-                    setTimeout(() => { if (status) status.remove(); }, 2000);
+                    if (statusEl) statusEl.textContent = '✅ Uploaded!';
                     showMessage('📸 Image uploaded!', 'success');
                 } else {
-                    showMessage('Upload failed', 'error');
+                    if (statusEl) statusEl.textContent = '❌ Failed';
+                    showMessage('Upload failed: ' + (data.error || 'unknown'), 'error');
                 }
             } catch (err) {
-                showMessage('Upload error', 'error');
+                if (statusEl) statusEl.textContent = '❌ Error';
+                showMessage('Upload error: network issue', 'error');
             } finally {
                 _isUploading = false;
                 document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = false);
+                // Always clean up status after a delay
+                if (statusEl) setTimeout(() => { if (statusEl.parentNode) statusEl.remove(); }, 3000);
             }
         }
         async function loadHomepageSettings() {
