@@ -40,7 +40,7 @@ app.use(session({
 
 // CSRF protection
 const csrfProtection = csrf({ cookie: true });
-app.use(csrfProtection);
+// CSRF applied per-route on admin APIs only
 
 // Homepage — shows featured products only
 app.get('/', async (req, res) => {
