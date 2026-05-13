@@ -485,6 +485,11 @@
         async function handleAddProduct(e) {
             e.preventDefault();
             
+            if (_isUploading) {
+                showMessage('⏳ Wait for upload to finish!', 'error');
+                return;
+            }
+            
             const form = e.target;
             const data = new FormData(form);
             
@@ -619,6 +624,11 @@
         async function handleEditProduct(e, productId) {
             e.preventDefault();
             
+            if (_isUploading) {
+                showMessage('⏳ Wait for upload to finish!', 'error');
+                return;
+            }
+            
             const form = e.target;
             const data = Object.fromEntries(new FormData(form));
             
@@ -662,12 +672,18 @@
             }
         }
         
+        let _isUploading = false;
+        
         // Image upload helper
         async function uploadImage(input, targetFieldId) {
             const file = input.files[0];
             if (!file) return;
             
-            // Show preview immediately (before upload)
+            // Disable submit buttons during upload
+            _isUploading = true;
+            document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = true);
+            
+            // Show local preview immediately
             const previewId = targetFieldId === 'image_url' ? 'img_preview_add' : 'img_preview_edit';
             const previewDiv = document.getElementById(previewId);
             if (previewDiv) {
@@ -675,6 +691,15 @@
                 reader.onload = (e) => {
                     previewDiv.querySelector('img').src = e.target.result;
                     previewDiv.style.display = 'block';
+                    // Show uploading overlay
+                    if (!previewDiv.querySelector('.upload-status')) {
+                        const status = document.createElement('div');
+                        status.className = 'upload-status';
+                        status.style.cssText = 'position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:4px;font-size:12px;';
+                        status.textContent = '⬆ Uploading...';
+                        previewDiv.style.position = 'relative';
+                        previewDiv.appendChild(status);
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -686,12 +711,19 @@
                 const data = await res.json();
                 if (data.url) {
                     document.getElementById(targetFieldId).value = data.url;
+                    // Remove uploading overlay
+                    const status = previewDiv?.querySelector('.upload-status');
+                    if (status) status.textContent = '✅ Uploaded!';
+                    setTimeout(() => { if (status) status.remove(); }, 2000);
                     showMessage('📸 Image uploaded!', 'success');
                 } else {
                     showMessage('Upload failed', 'error');
                 }
             } catch (err) {
                 showMessage('Upload error', 'error');
+            } finally {
+                _isUploading = false;
+                document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = false);
             }
         }
         async function loadHomepageSettings() {
