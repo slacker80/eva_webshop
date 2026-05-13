@@ -41,6 +41,63 @@ app.use(session({
 // CSRF protection
 const csrfProtection = csrf({ cookie: true });
 app.use(csrfProtection);
+
+// Homepage — shows featured products only
+app.get('/', async (req, res) => {
+  try {
+    const products = await getProducts();
+    const featured = products.filter(p => p.featured === 1);
+    
+    const productCards = featured.map(p => `
+                <div class="product-card">
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-category">${p.category}</div>
+                    <div class="product-description">${p.description}</div>
+                    <div class="product-footer">
+                        <div class="product-price">$${p.price}</div>
+                        <button class="add-btn">Add to Cart</button>
+                    </div>
+                </div>`).join('');
+
+    const content = `
+            <div class="hero">
+                <h1>✨ Handcrafted Crystal Jewelry</h1>
+                <p>Discover our beautiful collection of handcrafted crystal jewelry. Each piece is made with love and positive energy.</p>
+            </div>
+
+            <div class="about-section">
+                <div class="about-card">
+                    <div class="icon">💎</div>
+                    <h3>Authentic Crystals</h3>
+                    <p>Every piece features genuine, ethically sourced crystals handpicked for quality and beauty.</p>
+                </div>
+                <div class="about-card">
+                    <div class="icon">🤲</div>
+                    <h3>Handcrafted With Care</h3>
+                    <p>Each jewelry piece is carefully handcrafted by our skilled artisans with attention to every detail.</p>
+                </div>
+                <div class="about-card">
+                    <div class="icon">🌍</div>
+                    <h3>Sustainable & Ethical</h3>
+                    <p>We are committed to sustainable practices and ethical sourcing for all our materials.</p>
+                </div>
+            </div>
+
+            <div class="category-header">
+                <h1>🌟 Featured Products</h1>
+                <p class="category-count">${featured.length} handpicked pieces</p>
+            </div>
+
+            <div class="products-grid">
+                ${productCards || '<p>No featured products yet. Check our <a href="/bracelets">categories</a>!</p>'}
+            </div>`;
+
+    res.send(renderPage('Handcrafted Crystal Jewelry', content, '/'));
+  } catch (err) {
+    res.status(500).send(renderPage('Error', '<p>Something went wrong.</p>'));
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // IP whitelist for admin access
@@ -110,6 +167,102 @@ app.get('/api/products/category/:category', async (req, res) => {
   }
 });
 
+// Featured products API
+app.get('/api/products/featured', async (req, res) => {
+  try {
+    const products = await getProducts();
+    res.json(products.filter(p => p.featured === 1));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+// Shared HTML layout helper
+function renderPage(title, content, activeCat = '') {
+  const cats = ['All Products', 'Bracelets', 'Necklaces', 'Rings', 'Earrings'];
+  const slugs = ['/', '/bracelets', '/necklaces', '/rings', '/earrings'];
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Jewelz - ${title}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        header { background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #d4af37 100%); color: white; padding: 1.5rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.8rem; font-weight: bold; color: white; text-decoration: none; }
+        .logo:hover { color: #d4af37; }
+        
+        .hero { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 50%, #ffecb3 100%); padding: 4rem 0; text-align: center; margin-bottom: 2rem; }
+        .hero h1 { font-size: 2.5rem; color: #4a148c; margin-bottom: 0.5rem; }
+        .hero p { font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto; }
+        
+        main { padding: 2rem 0; }
+        
+        .category-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
+        .filter-btn { display: inline-block; padding: 0.5rem 1.5rem; border: 2px solid #7b1fa2; background: white; color: #7b1fa2; border-radius: 25px; cursor: pointer; transition: all 0.3s; font-weight: 500; text-decoration: none; font-size: 0.95rem; }
+        .filter-btn:hover, .filter-btn.active { background: #7b1fa2; color: white; }
+        
+        .category-header { margin-bottom: 2rem; }
+        .category-header h1 { color: #4a148c; font-size: 2rem; }
+        .category-count { color: #666; margin-top: 0.25rem; }
+        
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+        .product-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+        .product-name { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; }
+        .product-category { display: inline-block; background: rgba(123, 31, 162, 0.1); color: #7b1fa2; padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+        .product-description { color: #718096; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.5; }
+        .product-footer { display: flex; justify-content: space-between; align-items: center; }
+        .product-price { font-size: 1.4rem; font-weight: bold; color: #d4af37; }
+        .add-btn { background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; font-weight: 600; transition: opacity 0.3s; }
+        .add-btn:hover { opacity: 0.9; }
+        
+        footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
+        footer p { color: rgba(255,255,255,0.7); }
+        
+        .about-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 4rem 0; }
+        .about-card { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .about-card .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .about-card h3 { color: #4a148c; margin-bottom: 0.5rem; }
+        .about-card p { color: #666; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <a href="/" class="logo">💎 Crystal Jewelz</a>
+                <nav>
+                    <a href="/" class="filter-btn" style="color:white;border-color:rgba(255,255,255,0.5);background:transparent;">Home</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <nav class="category-nav">
+                ${cats.map((c, i) => `<a href="${slugs[i]}" class="filter-btn${activeCat === slugs[i] ? ' active' : ''}">${c}</a>`).join('\n                ')}
+            </nav>
+            ${content}
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 Crystal Jewelz. Handcrafted with love ✨</p>
+        </div>
+    </footer>
+</body>
+</html>`;
+}
+
 // Category pages (server-side rendered)
 const CATEGORIES = ['bracelets', 'necklaces', 'rings', 'earrings', 'anklets'];
 CATEGORIES.forEach(cat => {
@@ -120,57 +273,28 @@ CATEGORIES.forEach(cat => {
       const catTitle = cat.charAt(0).toUpperCase() + cat.slice(1);
       
       const productCards = categoryProducts.map(p => `
-        <div class="product-card">
-          <div class="product-name">${p.name}</div>
-          <div class="product-category">${p.category}</div>
-          <div class="product-description">${p.description}</div>
-          <div class="product-footer">
-            <div class="product-price">$${p.price}</div>
-            <button class="add-btn">Add to Cart</button>
-          </div>
-        </div>`).join('');
+                <div class="product-card">
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-category">${p.category}</div>
+                    <div class="product-description">${p.description}</div>
+                    <div class="product-footer">
+                        <div class="product-price">$${p.price}</div>
+                        <button class="add-btn">Add to Cart</button>
+                    </div>
+                </div>`).join('');
       
-      res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crystal Jewelz - ${catTitle}</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <a href="/" class="logo">💎 Crystal Jewelz</a>
-            </div>
-        </div>
-    </header>
-
-    <main>
-        <div class="container">
-            <nav class="category-nav">
-                <a href="/" class="filter-btn">All Products</a>
-                <a href="/bracelets" class="filter-btn${cat === 'bracelets' ? ' active' : ''}">Bracelets</a>
-                <a href="/necklaces" class="filter-btn${cat === 'necklaces' ? ' active' : ''}">Necklaces</a>
-                <a href="/rings" class="filter-btn${cat === 'rings' ? ' active' : ''}">Rings</a>
-                <a href="/earrings" class="filter-btn${cat === 'earrings' ? ' active' : ''}">Earrings</a>
-            </nav>
-
-            <section class="category-header">
+      const content = `
+            <div class="category-header">
                 <h1>✨ ${catTitle}</h1>
                 <p class="category-count">${categoryProducts.length} products</p>
-            </section>
-
-            <div class="products-grid">
-                ${productCards}
             </div>
-        </div>
-    </main>
-</body>
-</html>`);
+            <div class="products-grid">
+                ${productCards || '<p>No products in this category yet.</p>'}
+            </div>`;
+      
+      res.send(renderPage(catTitle, content, `/${cat}`));
     } catch (err) {
-      res.status(500).send('<p>Failed to load products</p>');
+      res.status(500).send(renderPage('Error', '<p>Failed to load products.</p>'));
     }
   });
 });
