@@ -573,10 +573,28 @@
             // Update active filter button
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
+                if (btn.textContent.toLowerCase().includes(category) || (category === 'all' && btn.textContent === 'All Products')) {
+                    btn.classList.add('active');
+                }
             });
-            event.target.classList.add('active');
             
-            displayProducts();
+            // Filter and display
+            const filtered = category === 'all' 
+                ? products 
+                : products.filter(p => p.category.toLowerCase() === category.toLowerCase());
+            
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = filtered.map(product => `
+                <div class="product-card">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-category">${product.category}</div>
+                    <div class="product-description">${product.description}</div>
+                    <div class="product-footer">
+                        <div class="product-price">$${product.price}</div>
+                        <button class="add-btn">Add to Cart</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function addToCart(productId) {
