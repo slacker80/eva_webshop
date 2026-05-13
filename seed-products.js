@@ -25,8 +25,8 @@ const products = [
   { name: 'Minimalist Silver Ring', description: 'Simple elegant silver band', price: 15, category: 'Rings', stock: 20, image_url: '/images/ring-3.jpg', featured: false },
   
   // Earrings
-  { name: 'Crystal Drop Earrings', description: 'Rose quartz crystal drops with sterling silver hooks', price: 16, category: 'Earrings', stock: 14, image_url: '/images/earring-1.jpg', featured: false },
-  { name: 'Hoop Statement Earrings', description: 'Gold-plated medium hoop earrings', price: 20, category: 'Earrings', stock: 11, image_url: '/images/earring-2.jpg', featured: false },
+  { name: 'Crystal Drop Earrings', description: 'Rose quartz crystal drops with sterling silver hooks', price: 16, category: 'Earrings', stock: 14, image_url: '/images/earring-1.jpg', featured: true },
+  { name: 'Hoop Statement Earrings', description: 'Gold-plated medium hoop earrings', price: 20, category: 'Earrings', stock: 11, image_url: '/images/earring-2.jpg', featured: true },
   { name: 'Stud Crystal Earrings', description: 'Beautiful amethyst crystal studs', price: 14, category: 'Earrings', stock: 16, image_url: '/images/earring-3.jpg', featured: false }
 ];
 
