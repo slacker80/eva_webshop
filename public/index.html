@@ -744,8 +744,21 @@
 
                 // Calculate total
                 const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                cartTotal.innerHTML = `Total: $${total.toFixed(2)}`;
+                cartTotal.innerHTML = `
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #d4af37;">
+                        <div style="font-size: 1.2rem; font-weight: bold; text-align: right; margin-bottom: 1rem;">
+                            Total: $${total.toFixed(2)}
+                        </div>
+                        <button onclick="proceedToCheckout()" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            🛒 Proceed to Checkout
+                        </button>
+                    </div>
+                `;
             }
+        }
+
+        function proceedToCheckout() {
+            window.location.href = '/checkout.html';
         }
 
         function toggleCart() {

@@ -10,6 +10,7 @@ const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
 const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
+const paymentRouter = require('./backend/routes/payment');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -173,6 +174,9 @@ console.log('Initializing database...');
 initDatabase()
   .then(() => console.log('Database initialized'))
   .catch(err => console.error('DB init error:', err));
+
+// Mount payment routes
+app.use(paymentRouter);
 
 // ==== PUBLIC ROUTES ====
 
