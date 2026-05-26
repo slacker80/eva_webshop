@@ -1,91 +1,77 @@
 # Eva Webshop
 
-A simple e-commerce web application built with Express.js and vanilla JavaScript.
+Small Express/SQLite webshop for Crystal Jewelz.
 
-## Features
+## Runtime
 
-- Product catalog with categories
-- Shopping cart functionality
-- Responsive design
-- RESTful API
-- Real-time cart updates
+- Node.js + Express
+- SQLite database
+- Server-rendered product/category pages
+- Static admin and checkout pages from `public/`
+- Stripe Checkout scaffold
+- Docker image based deployment
 
-## Getting Started
+## Important Files
 
-### Prerequisites
+- `server.js` - Express app, product pages, cart API, admin routes, Stripe routes
+- `db-utils.js` - SQLite setup and data access
+- `public/` - admin, checkout, payment result and legacy index pages
+- `Dockerfile` - production image build
+- `docker-compose.yml` - production container runtime
+- `deploy-versioned.sh` - builds and deploys a tagged image
+- `.env.example` - required runtime settings without secrets
 
-- Node.js (version 14 or higher)
-- npm
+## Local Run
 
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd eva_webshop
-```
-
-2. Install dependencies:
 ```bash
 npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-Or start the production server:
-```bash
 npm start
 ```
 
-The application will be available at `http://localhost:3000`
+Open `http://localhost:3000`.
 
-## API Endpoints
+## Production Deploy
 
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/:id` - Get a single product
-- `GET /api/products/category/:category` - Get products by category
+Create `.env` from `.env.example` and fill production values on the server.
+Do not commit `.env`.
 
-### Cart
-- `GET /api/cart` - Get current cart
-- `POST /api/cart` - Add item to cart
-- `PUT /api/cart/:productId` - Update cart item quantity
-- `DELETE /api/cart/:productId` - Remove item from cart
-- `DELETE /api/cart` - Clear cart
-
-## Project Structure
-
-```
-eva_webshop/
-├── public/
-│   └── index.html          # Frontend application
-├── server.js               # Express server and API routes
-├── package.json            # Project dependencies and scripts
-├── .gitignore              # Git ignore file
-└── README.md               # This file
-```
-
-## Technologies Used
-
-- **Backend**: Node.js, Express.js
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Data Storage**: In-memory (for demo purposes)
-
-## Development
-
-To run in development mode with auto-reload:
 ```bash
-npm run dev
+./deploy-versioned.sh 20260526-example
 ```
 
-## Future Enhancements
+The deploy keeps runtime data outside the image:
 
-- Database integration (MongoDB/PostgreSQL)
-- User authentication
-- Payment processing
-- Product search
-- Admin panel for product management
-- Order history
+- database: `/root/eva_data/database.db`
+- uploads: `/root/eva_uploads`
+
+## Stripe
+
+Set these in `.env` on the server:
+
+```env
+BASE_URL=https://crystaljewelz.nl
+STRIPE_CURRENCY=eur
+STRIPE_SECRET_KEY=sk_test_or_live...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Stripe webhook endpoint:
+
+```text
+https://crystaljewelz.nl/webhook/stripe
+```
+
+Required event:
+
+```text
+checkout.session.completed
+```
+
+## Docker Image
+
+The image is intended to be tagged per deploy, for example:
+
+```bash
+docker build -t ghcr.io/slacker80/eva-webshop:20260526-1925 .
+docker push ghcr.io/slacker80/eva-webshop:20260526-1925
+```

@@ -570,7 +570,7 @@ app.post('/pay', async (req, res) => {
         cartSessionId: sessionId,
         customer: customerSummary({ name, email, address }),
       },
-      success_url: `${baseUrl}/payment-result?status=success`,
+      success_url: `${baseUrl}/payment-result.html?status=success`,
       cancel_url: `${baseUrl}/checkout.html?status=cancelled`,
     });
 
