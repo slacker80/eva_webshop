@@ -283,6 +283,7 @@ function renderPage(title, content, activeCat = '') {
         .cart-actions { display: flex; align-items: center; gap: 0.5rem; }
         .cart-actions button { border: 0; background: #7b1fa2; color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
         .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
+        .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
         .empty-cart { color: #718096; padding: 1rem 0; }
         
         footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
@@ -373,7 +374,7 @@ function renderPage(title, content, activeCat = '') {
                 '</div>';
             }).join('');
             const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
-            cartTotal().textContent = 'Total: $' + total.toFixed(2);
+            cartTotal().innerHTML = 'Total: $' + total.toFixed(2) + '<br><a class="checkout-link" href="/checkout.html">Bestelling plaatsen</a>';
         }
 
         async function loadCart() {
