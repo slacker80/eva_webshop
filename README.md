@@ -70,3 +70,13 @@ The image is intended to be tagged per deploy, for example:
 docker build -t ghcr.io/slacker80/eva-webshop:20260526-1925 .
 docker push ghcr.io/slacker80/eva-webshop:20260526-1925
 ```
+
+
+## Admin Access
+
+The admin portal is intended to be reachable only from the configured home IP address. The live nginx configuration also restricts `/admin`, `/admin/`, and `/api/admin/` before requests reach the Node app.
+
+
+## TLS Renewal
+
+Port 80 is intentionally closed on the production VM. Before the next Let's Encrypt renewal, move certificate renewal to a DNS-01 challenge. HTTP-01 renewal will not work while only ports 22 and 443 are open.
