@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
 const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
-const stripeClient = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+const { sendManualOrderEmail } = require('./backend/email');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,47 +26,6 @@ const limiter = rateLimit({
 app.use(limiter);
 
 
-function publicBaseUrl(req) {
-  return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-}
-
-function cartSessionId(req) {
-  if (!req.session.cartStartedAt) {
-    req.session.cartStartedAt = Date.now();
-  }
-  req.session.cartLastSeenAt = Date.now();
-  return req.sessionID;
-}
-
-function customerSummary({ name, email, address }) {
-  return [name, email, address].filter(Boolean).join(' | ').slice(0, 500);
-}
-
-app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  if (!stripeClient || !process.env.STRIPE_WEBHOOK_SECRET) {
-    return res.status(503).send('Stripe webhook not configured');
-  }
-
-  const signature = req.headers['stripe-signature'];
-  let event;
-  try {
-    event = stripeClient.webhooks.constructEvent(req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    console.error('Stripe webhook signature verification failed:', err.message);
-    return res.status(400).send('Invalid signature');
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const sessionId = session.metadata && session.metadata.cartSessionId;
-    if (sessionId) {
-      await clearCart(sessionId);
-      console.log(`Stripe checkout completed for cart session ${sessionId}`);
-    }
-  }
-
-  res.sendStatus(200);
-});
 
 // Middleware
 app.use(helmet({
@@ -324,6 +283,7 @@ function renderPage(title, content, activeCat = '') {
         .cart-actions { display: flex; align-items: center; gap: 0.5rem; }
         .cart-actions button { border: 0; background: #7b1fa2; color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
         .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
+        .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
         .empty-cart { color: #718096; padding: 1rem 0; }
         
         footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
@@ -414,7 +374,7 @@ function renderPage(title, content, activeCat = '') {
                 '</div>';
             }).join('');
             const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
-            cartTotal().textContent = 'Total: $' + total.toFixed(2);
+            cartTotal().innerHTML = 'Total: $' + total.toFixed(2) + '<br><a class="checkout-link" href="/checkout.html">Bestelling plaatsen</a>';
         }
 
         async function loadCart() {
@@ -532,53 +492,82 @@ app.get('/api/homepage', async (req, res) => {
 });
 
 
-app.post('/pay', async (req, res) => {
-  if (!stripeClient) {
-    return res.status(503).json({ error: 'Stripe is not configured' });
-  }
 
+function cartSessionId(req) {
+  if (!req.session.cartStartedAt) {
+    req.session.cartStartedAt = Date.now();
+  }
+  req.session.cartLastSeenAt = Date.now();
+  return req.sessionID;
+}
+
+function orderTotal(cart) {
+  return cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+}
+
+function orderId() {
+  return `CJ-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(16).slice(2, 8).toUpperCase()}`;
+}
+
+async function saveManualOrder(order) {
+  const dataDir = process.env.DATA_DIR || __dirname;
+  await fs.promises.mkdir(dataDir, { recursive: true });
+  await fs.promises.appendFile(path.join(dataDir, 'manual-orders.jsonl'), JSON.stringify(order) + '\n');
+}
+
+app.post('/api/manual-order', async (req, res) => {
   try {
-    const { name, email, address } = req.body;
-    if (!name || !email || !address) {
-      return res.status(400).json({ error: 'Missing checkout info' });
+    const { name, email, phone, street, houseNumber, postalCode, city, address, notes } = req.body;
+    const normalizedPostcode = String(postalCode || '').replace(/\s+/g, '').toUpperCase();
+    const postcodeOk = /^[1-9][0-9]{3}[A-Z]{2}$/.test(normalizedPostcode);
+    if (!name || !email || !phone || !street || !houseNumber || !postalCode || !city || !address) {
+      return res.status(400).json({ error: 'Naam, e-mail, telefoon en volledig adres zijn verplicht' });
+    }
+    if (!postcodeOk) {
+      return res.status(400).json({ error: 'Postcode moet het formaat 1234 AB hebben' });
     }
 
     const sessionId = cartSessionId(req);
     const cart = await getCart(sessionId);
     if (!cart.length) {
-      return res.status(400).json({ error: 'Cart is empty' });
+      return res.status(400).json({ error: 'Je winkelmand is leeg' });
     }
 
-    const baseUrl = publicBaseUrl(req);
-    const currency = (process.env.STRIPE_CURRENCY || 'eur').toLowerCase();
-    const checkout = await stripeClient.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card', 'ideal'],
-      customer_email: email,
-      line_items: cart.map(item => ({
-        quantity: Number(item.quantity || 1),
-        price_data: {
-          currency,
-          unit_amount: Math.round(Number(item.price || 0) * 100),
-          product_data: {
-            name: item.name,
-            description: item.description || undefined,
-          },
-        },
-      })),
-      metadata: {
-        cartSessionId: sessionId,
-        customer: customerSummary({ name, email, address }),
-      },
-      success_url: `${baseUrl}/payment-result.html?status=success`,
-      cancel_url: `${baseUrl}/checkout.html?status=cancelled`,
-    });
+    const order = {
+      id: orderId(),
+      createdAt: new Date().toISOString(),
+      sessionId,
+      name,
+      email,
+      phone: phone || '',
+      street,
+      houseNumber,
+      postalCode: normalizedPostcode.replace(/^([1-9][0-9]{3})([A-Z]{2})$/, '$1 $2'),
+      city,
+      address,
+      notes: notes || '',
+      items: cart,
+      total: orderTotal(cart),
+      payment: 'manual-rabobank-payment-request',
+      status: 'manual-review'
+    };
 
-    res.json({ paymentUrl: checkout.url });
+    await saveManualOrder(order);
+    await sendManualOrderEmail(order);
+    await clearCart(sessionId);
+
+    res.json({ ok: true, orderId: order.id });
   } catch (err) {
-    console.error('Stripe checkout error:', err);
-    res.status(500).json({ error: 'Failed to create payment' });
+    console.error('Manual order failed:', err);
+    if (err.code === 'SMTP_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'Bestelling is opgeslagen, maar e-mail is nog niet ingesteld. Neem contact op met Crystal Jewelz.' });
+    }
+    res.status(500).json({ error: 'Bestelling kon niet worden verstuurd' });
   }
+});
+
+app.post('/pay', (req, res) => {
+  res.status(410).json({ error: 'Online betalen staat tijdelijk uit. Gebruik het handmatige bestelformulier.' });
 });
 
 // ==== CART ROUTES ====
