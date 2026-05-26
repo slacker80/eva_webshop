@@ -492,6 +492,14 @@ app.get('/api/homepage', async (req, res) => {
 
 
 
+function cartSessionId(req) {
+  if (!req.session.cartStartedAt) {
+    req.session.cartStartedAt = Date.now();
+  }
+  req.session.cartLastSeenAt = Date.now();
+  return req.sessionID;
+}
+
 function orderTotal(cart) {
   return cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
 }
