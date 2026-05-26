@@ -5,17 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Bestelling plaatsen - Crystal Jewelz</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 1rem; background: #f8f9fa; color: #333; max-width: 680px; margin: auto; }
-    h1 { color: #4a148c; margin-bottom: .75rem; }
-    .notice { background: #fff8e1; border: 1px solid #d4af37; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; line-height: 1.45; }
-    form { background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; }
-    input, textarea { width: 100%; box-sizing: border-box; padding: 0.65rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    button { margin-top: 1rem; padding: 0.85rem 1rem; border: none; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border-radius: 25px; font-weight: 700; cursor: pointer; width: 100%; }
+    :root { --purple: #4a148c; --accent: #d4af37; --muted: #667085; --line: #ddd; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 1rem; background: #f8f9fa; color: #333; max-width: 760px; margin: auto; }
+    h1 { color: var(--purple); margin-bottom: .75rem; }
+    h2 { color: var(--purple); font-size: 1.1rem; margin: 0 0 .75rem; }
+    .notice, .summary, form { background: white; border-radius: 8px; padding: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1rem; }
+    .notice { background: #fff8e1; border: 1px solid var(--accent); line-height: 1.45; }
+    .cart-line { display: grid; grid-template-columns: 1fr auto; gap: .75rem; padding: .75rem 0; border-bottom: 1px solid #eee; }
+    .cart-line:last-child { border-bottom: 0; }
+    .cart-line small { color: var(--muted); }
+    .total { display: flex; justify-content: space-between; font-weight: 800; color: var(--purple); padding-top: .75rem; border-top: 2px solid #eee; }
+    .empty { color: var(--muted); }
+    label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 650; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 0.65rem; font-size: 1rem; border: 1px solid #bbb; border-radius: 4px; background: white; }
+    input:invalid.touched, textarea:invalid.touched { border-color: #c62828; }
+    .grid { display: grid; grid-template-columns: 1fr 9rem; gap: .75rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 7rem 9rem; gap: .75rem; }
+    .hint { color: var(--muted); font-size: .9rem; margin-top: .25rem; }
+    button { margin-top: 1rem; padding: 0.85rem 1rem; border: none; background: linear-gradient(135deg, #7b1fa2 0%, var(--accent) 100%); color: white; border-radius: 25px; font-weight: 700; cursor: pointer; width: 100%; font-size: 1rem; }
     button:disabled { background: grey; cursor: wait; }
     .status { margin-top: 1rem; padding: .85rem; border-radius: 8px; display: none; line-height: 1.4; }
     .status.ok { display: block; background: #e8f5e9; border: 1px solid #2e7d32; }
     .status.error { display: block; background: #ffebee; border: 1px solid #c62828; }
+    @media (max-width: 640px) {
+      .grid, .grid-3 { grid-template-columns: 1fr; gap: 0; }
+      .cart-line { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -27,40 +42,131 @@
     Na controle ontvang je een betaalverzoek, bijvoorbeeld via Rabobank. Er wordt nu nog geen automatische betaling gestart.
   </div>
 
+  <section class="summary">
+    <h2>Je bestelling</h2>
+    <div id="cartSummary" class="empty">Winkelmand laden...</div>
+    <div id="cartTotal" class="total" hidden></div>
+  </section>
+
   <form id="checkoutForm">
+    <h2>Contactgegevens</h2>
     <label for="name">Naam *</label>
-    <input type="text" id="name" name="name" autocomplete="name" required />
+    <input type="text" id="name" name="name" autocomplete="name" minlength="2" required />
 
-    <label for="email">E-mailadres *</label>
-    <input type="email" id="email" name="email" autocomplete="email" required />
+    <div class="grid">
+      <div>
+        <label for="email">E-mailadres *</label>
+        <input type="email" id="email" name="email" autocomplete="email" required />
+      </div>
+      <div>
+        <label for="phone">Telefoon *</label>
+        <input type="tel" id="phone" name="phone" autocomplete="tel" inputmode="tel" pattern="^(?:\+31|0)[0-9\s-]{8,13}$" required />
+      </div>
+    </div>
 
-    <label for="phone">Telefoonnummer</label>
-    <input type="tel" id="phone" name="phone" autocomplete="tel" />
+    <h2>Bezorgadres</h2>
+    <div class="grid-3">
+      <div>
+        <label for="street">Straat *</label>
+        <input type="text" id="street" name="street" autocomplete="shipping address-line1" minlength="2" required />
+      </div>
+      <div>
+        <label for="houseNumber">Huisnr. *</label>
+        <input type="text" id="houseNumber" name="houseNumber" autocomplete="shipping address-line2" pattern="^[0-9]{1,5}[a-zA-Z]?(?:[-\s]?[a-zA-Z0-9]{1,6})?$" required />
+      </div>
+      <div>
+        <label for="postalCode">Postcode *</label>
+        <input type="text" id="postalCode" name="postalCode" autocomplete="shipping postal-code" inputmode="text" pattern="^[1-9][0-9]{3}\s?[A-Za-z]{2}$" maxlength="7" required />
+      </div>
+    </div>
 
-    <label for="address">Bezorgadres *</label>
-    <textarea id="address" name="address" rows="3" autocomplete="shipping street-address" required></textarea>
+    <label for="city">Plaats *</label>
+    <input type="text" id="city" name="city" autocomplete="shipping address-level2" minlength="2" required />
+    <div class="hint">Postcode formaat: 1234 AB. We controleren het formaat, niet automatisch of de postcode echt bestaat.</div>
 
     <label for="notes">Opmerking</label>
     <textarea id="notes" name="notes" rows="3" placeholder="Bijvoorbeeld maat, cadeauverpakking of voorkeur voor betaalverzoek."></textarea>
 
-    <button type="submit">Bestelling handmatig aanvragen</button>
+    <button type="submit" id="submitButton" disabled>Bestelling handmatig aanvragen</button>
     <div id="status" class="status"></div>
   </form>
 
   <script>
     const form = document.getElementById('checkoutForm');
     const statusBox = document.getElementById('status');
+    const submitButton = document.getElementById('submitButton');
+    let cart = [];
+
+    function money(value) {
+      return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
+    }
+
+    function normalizePostcode(value) {
+      return value.replace(/\s+/g, '').toUpperCase().replace(/^([1-9][0-9]{3})([A-Z]{2})$/, '$1 $2');
+    }
 
     function setStatus(type, message) {
       statusBox.className = 'status ' + type;
       statusBox.textContent = message;
     }
 
+    function renderCart() {
+      const summary = document.getElementById('cartSummary');
+      const totalBox = document.getElementById('cartTotal');
+      if (!cart.length) {
+        summary.className = 'empty';
+        summary.innerHTML = 'Je winkelmand is leeg. <a href="/">Ga terug naar de webshop</a>.';
+        totalBox.hidden = true;
+        submitButton.disabled = true;
+        return;
+      }
+      summary.className = '';
+      summary.innerHTML = cart.map(item => {
+        const qty = Number(item.quantity || 0);
+        const price = Number(item.price || 0);
+        return '<div class="cart-line"><div><strong>' + escapeHtml(item.name) + '</strong><br><small>' + qty + ' x ' + money(price) + '</small></div><div><strong>' + money(qty * price) + '</strong></div></div>';
+      }).join('');
+      const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+      totalBox.hidden = false;
+      totalBox.innerHTML = '<span>Totaal</span><span>' + money(total) + '</span>';
+      submitButton.disabled = false;
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    async function loadCart() {
+      const res = await fetch('/api/cart', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Winkelmand kon niet worden geladen');
+      cart = await res.json();
+      renderCart();
+    }
+
+    document.getElementById('postalCode').addEventListener('blur', e => {
+      e.target.value = normalizePostcode(e.target.value);
+    });
+
+    form.querySelectorAll('input, textarea').forEach(field => {
+      field.addEventListener('blur', () => field.classList.add('touched'));
+    });
+
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      const btn = e.target.querySelector('button');
-      btn.disabled = true;
-      btn.textContent = 'Bestelling versturen...';
+      form.querySelectorAll('input, textarea').forEach(field => field.classList.add('touched'));
+      const postalCode = normalizePostcode(e.target.postalCode.value);
+      e.target.postalCode.value = postalCode;
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      if (!cart.length) {
+        setStatus('error', 'Je winkelmand is leeg.');
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Bestelling versturen...';
       statusBox.className = 'status';
       statusBox.textContent = '';
 
@@ -68,7 +174,14 @@
         name: e.target.name.value.trim(),
         email: e.target.email.value.trim(),
         phone: e.target.phone.value.trim(),
-        address: e.target.address.value.trim(),
+        street: e.target.street.value.trim(),
+        houseNumber: e.target.houseNumber.value.trim(),
+        postalCode,
+        city: e.target.city.value.trim(),
+        address: [
+          e.target.street.value.trim() + ' ' + e.target.houseNumber.value.trim(),
+          postalCode + ' ' + e.target.city.value.trim()
+        ].join('\n'),
         notes: e.target.notes.value.trim()
       };
 
@@ -83,13 +196,17 @@
         if (!res.ok) throw new Error(json.error || 'Bestelling kon niet worden verstuurd');
         setStatus('ok', 'Bedankt. Je bestelling is ontvangen. We controleren deze handmatig en sturen daarna een betaalverzoek.');
         form.reset();
+        cart = [];
+        renderCart();
       } catch (error) {
         setStatus('error', error.message || 'Er ging iets mis. Probeer het later opnieuw.');
       } finally {
-        btn.disabled = false;
-        btn.textContent = 'Bestelling handmatig aanvragen';
+        submitButton.disabled = !cart.length;
+        submitButton.textContent = 'Bestelling handmatig aanvragen';
       }
     });
+
+    loadCart().catch(error => setStatus('error', error.message));
   </script>
 </body>
 </html>

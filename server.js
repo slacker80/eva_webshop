@@ -517,9 +517,14 @@ async function saveManualOrder(order) {
 
 app.post('/api/manual-order', async (req, res) => {
   try {
-    const { name, email, phone, address, notes } = req.body;
-    if (!name || !email || !address) {
-      return res.status(400).json({ error: 'Naam, e-mail en adres zijn verplicht' });
+    const { name, email, phone, street, houseNumber, postalCode, city, address, notes } = req.body;
+    const normalizedPostcode = String(postalCode || '').replace(/\s+/g, '').toUpperCase();
+    const postcodeOk = /^[1-9][0-9]{3}[A-Z]{2}$/.test(normalizedPostcode);
+    if (!name || !email || !phone || !street || !houseNumber || !postalCode || !city || !address) {
+      return res.status(400).json({ error: 'Naam, e-mail, telefoon en volledig adres zijn verplicht' });
+    }
+    if (!postcodeOk) {
+      return res.status(400).json({ error: 'Postcode moet het formaat 1234 AB hebben' });
     }
 
     const sessionId = cartSessionId(req);
@@ -535,6 +540,10 @@ app.post('/api/manual-order', async (req, res) => {
       name,
       email,
       phone: phone || '',
+      street,
+      houseNumber,
+      postalCode: normalizedPostcode.replace(/^([1-9][0-9]{3})([A-Z]{2})$/, '$1 $2'),
+      city,
       address,
       notes: notes || '',
       items: cart,
