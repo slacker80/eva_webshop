@@ -11,7 +11,7 @@ services:
       DATA_DIR: /app/data
       BASE_URL: ${BASE_URL:-https://crystaljewelz.nl}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - /root/eva_data:/app/data
       - /root/eva_uploads:/app/public/uploads
