@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
 const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
-const paymentRouter = require('./backend/routes/payment');
+const stripeClient = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +24,49 @@ const limiter = rateLimit({
   max: 1000
 });
 app.use(limiter);
+
+
+function publicBaseUrl(req) {
+  return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+}
+
+function cartSessionId(req) {
+  if (!req.session.cartStartedAt) {
+    req.session.cartStartedAt = Date.now();
+  }
+  req.session.cartLastSeenAt = Date.now();
+  return req.sessionID;
+}
+
+function customerSummary({ name, email, address }) {
+  return [name, email, address].filter(Boolean).join(' | ').slice(0, 500);
+}
+
+app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!stripeClient || !process.env.STRIPE_WEBHOOK_SECRET) {
+    return res.status(503).send('Stripe webhook not configured');
+  }
+
+  const signature = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripeClient.webhooks.constructEvent(req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Stripe webhook signature verification failed:', err.message);
+    return res.status(400).send('Invalid signature');
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const sessionId = session.metadata && session.metadata.cartSessionId;
+    if (sessionId) {
+      await clearCart(sessionId);
+      console.log(`Stripe checkout completed for cart session ${sessionId}`);
+    }
+  }
+
+  res.sendStatus(200);
+});
 
 // Middleware
 app.use(helmet({
@@ -74,7 +117,7 @@ app.get('/', async (req, res) => {
                     <div class="product-description">${p.description}</div>
                     <div class="product-footer">
                         <div class="product-price">$${p.price}</div>
-                        <button class="add-btn">Add to Cart</button>
+                        <button type="button" class="add-btn" data-add-to-cart="${p.id}">Add to Cart</button>
                     </div>
                 </div>`).join('');
 
@@ -175,9 +218,6 @@ initDatabase()
   .then(() => console.log('Database initialized'))
   .catch(err => console.error('DB init error:', err));
 
-// Mount payment routes
-app.use(paymentRouter);
-
 // ==== PUBLIC ROUTES ====
 
 app.get('/health', (req, res) => {
@@ -272,6 +312,19 @@ function renderPage(title, content, activeCat = '') {
         .product-price { font-size: 1.4rem; font-weight: bold; color: #d4af37; }
         .add-btn { background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; font-weight: 600; transition: opacity 0.3s; }
         .add-btn:hover { opacity: 0.9; }
+        .add-btn.added { background: #2f855a; }
+        .cart-button { margin-left: 0.75rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.55); padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        .cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; margin-left: 0.4rem; border-radius: 999px; background: #d4af37; color: #2d1742; font-size: 0.85rem; }
+        .cart-modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.45); padding: 2rem; }
+        .cart-modal.open { display: block; }
+        .cart-panel { max-width: 560px; margin: 5vh auto; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 18px 50px rgba(0,0,0,0.25); }
+        .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .cart-close { border: 0; background: transparent; font-size: 1.75rem; cursor: pointer; color: #4a148c; }
+        .cart-item { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid #eee; }
+        .cart-actions { display: flex; align-items: center; gap: 0.5rem; }
+        .cart-actions button { border: 0; background: #7b1fa2; color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
+        .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
+        .empty-cart { color: #718096; padding: 1rem 0; }
         
         footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
@@ -290,6 +343,7 @@ function renderPage(title, content, activeCat = '') {
                 <a href="/" class="logo">💎 Crystal Jewelz</a>
                 <nav>
                     <a href="/" class="filter-btn" style="color:white;border-color:rgba(255,255,255,0.5);background:transparent;">Home</a>
+                    <button type="button" id="cartButton" class="cart-button">Cart <span id="cartCount" class="cart-count">0</span></button>
                 </nav>
             </div>
         </div>
@@ -304,11 +358,129 @@ function renderPage(title, content, activeCat = '') {
         </div>
     </main>
 
+    <div id="cartModal" class="cart-modal" aria-hidden="true">
+        <div class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+            <div class="cart-header">
+                <h2 id="cartTitle">Your cart</h2>
+                <button type="button" id="cartClose" class="cart-close" aria-label="Close cart">&times;</button>
+            </div>
+            <div id="cartItems" class="empty-cart">Your cart is empty</div>
+            <div id="cartTotal" class="cart-total"></div>
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             <p>© 2026 Crystal Jewelz. Handcrafted with love ✨</p>
         </div>
     </footer>
+    <script>
+        let cart = [];
+        const cartModal = () => document.getElementById('cartModal');
+        const cartCount = () => document.getElementById('cartCount');
+        const cartItems = () => document.getElementById('cartItems');
+        const cartTotal = () => document.getElementById('cartTotal');
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+
+        function itemProductId(item) {
+            return item.product_id ?? item.productId ?? item.id;
+        }
+
+        function renderCart() {
+            const totalItems = cart.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+            cartCount().textContent = totalItems;
+            if (!cart.length) {
+                cartItems().className = 'empty-cart';
+                cartItems().innerHTML = 'Your cart is empty';
+                cartTotal().textContent = '';
+                return;
+            }
+            cartItems().className = '';
+            cartItems().innerHTML = cart.map(item => {
+                const productId = itemProductId(item);
+                const price = Number(item.price || 0);
+                const quantity = Number(item.quantity || 0);
+                return '<div class="cart-item">' +
+                    '<div><strong>' + escapeHtml(item.name) + '</strong><br><span>$' + price.toFixed(2) + ' each</span></div>' +
+                    '<div class="cart-actions">' +
+                        '<button type="button" data-cart-update="' + productId + '" data-change="-1">-</button>' +
+                        '<span>' + quantity + '</span>' +
+                        '<button type="button" data-cart-update="' + productId + '" data-change="1">+</button>' +
+                        '<button type="button" data-cart-remove="' + productId + '" aria-label="Remove item">&times;</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+            cartTotal().textContent = 'Total: $' + total.toFixed(2);
+        }
+
+        async function loadCart() {
+            const response = await fetch('/api/cart', { credentials: 'same-origin' });
+            if (!response.ok) throw new Error('Cart load failed');
+            cart = await response.json();
+            renderCart();
+        }
+
+        async function addToCart(productId, button) {
+            const response = await fetch('/api/cart', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ productId, quantity: 1 })
+            });
+            if (!response.ok) throw new Error(await response.text());
+            cart = await response.json();
+            renderCart();
+            if (button) {
+                const old = button.textContent;
+                button.textContent = 'Added';
+                button.classList.add('added');
+                setTimeout(() => { button.textContent = old; button.classList.remove('added'); }, 900);
+            }
+        }
+
+        async function updateCart(productId, change) {
+            const current = cart.find(item => String(itemProductId(item)) === String(productId));
+            const quantity = Math.max(0, Number(current?.quantity || 0) + Number(change));
+            const response = await fetch('/api/cart/' + productId, {
+                method: 'PUT',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity })
+            });
+            if (!response.ok) throw new Error(await response.text());
+            cart = await response.json();
+            renderCart();
+        }
+
+        async function removeCart(productId) {
+            const response = await fetch('/api/cart/' + productId, { method: 'DELETE', credentials: 'same-origin' });
+            if (!response.ok) throw new Error(await response.text());
+            cart = await response.json();
+            renderCart();
+        }
+
+        function openCart() { cartModal().classList.add('open'); cartModal().setAttribute('aria-hidden', 'false'); }
+        function closeCart() { cartModal().classList.remove('open'); cartModal().setAttribute('aria-hidden', 'true'); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCart().catch(console.error);
+            document.getElementById('cartButton').addEventListener('click', openCart);
+            document.getElementById('cartClose').addEventListener('click', closeCart);
+            cartModal().addEventListener('click', event => { if (event.target === cartModal()) closeCart(); });
+            document.addEventListener('click', event => {
+                const addButton = event.target.closest('[data-add-to-cart]');
+                if (addButton) addToCart(addButton.dataset.addToCart, addButton).catch(console.error);
+                const updateButton = event.target.closest('[data-cart-update]');
+                if (updateButton) updateCart(updateButton.dataset.cartUpdate, updateButton.dataset.change).catch(console.error);
+                const removeButton = event.target.closest('[data-cart-remove]');
+                if (removeButton) removeCart(removeButton.dataset.cartRemove).catch(console.error);
+            });
+        });
+    </script>
 </body>
 </html>`;
 }
@@ -330,7 +502,7 @@ CATEGORIES.forEach(cat => {
                     <div class="product-description">${p.description}</div>
                     <div class="product-footer">
                         <div class="product-price">$${p.price}</div>
-                        <button class="add-btn">Add to Cart</button>
+                        <button type="button" class="add-btn" data-add-to-cart="${p.id}">Add to Cart</button>
                     </div>
                 </div>`).join('');
       
@@ -359,11 +531,61 @@ app.get('/api/homepage', async (req, res) => {
   }
 });
 
+
+app.post('/pay', async (req, res) => {
+  if (!stripeClient) {
+    return res.status(503).json({ error: 'Stripe is not configured' });
+  }
+
+  try {
+    const { name, email, address } = req.body;
+    if (!name || !email || !address) {
+      return res.status(400).json({ error: 'Missing checkout info' });
+    }
+
+    const sessionId = cartSessionId(req);
+    const cart = await getCart(sessionId);
+    if (!cart.length) {
+      return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    const baseUrl = publicBaseUrl(req);
+    const currency = (process.env.STRIPE_CURRENCY || 'eur').toLowerCase();
+    const checkout = await stripeClient.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card', 'ideal'],
+      customer_email: email,
+      line_items: cart.map(item => ({
+        quantity: Number(item.quantity || 1),
+        price_data: {
+          currency,
+          unit_amount: Math.round(Number(item.price || 0) * 100),
+          product_data: {
+            name: item.name,
+            description: item.description || undefined,
+          },
+        },
+      })),
+      metadata: {
+        cartSessionId: sessionId,
+        customer: customerSummary({ name, email, address }),
+      },
+      success_url: `${baseUrl}/payment-result?status=success`,
+      cancel_url: `${baseUrl}/checkout.html?status=cancelled`,
+    });
+
+    res.json({ paymentUrl: checkout.url });
+  } catch (err) {
+    console.error('Stripe checkout error:', err);
+    res.status(500).json({ error: 'Failed to create payment' });
+  }
+});
+
 // ==== CART ROUTES ====
 
 app.get('/api/cart', async (req, res) => {
   try {
-    const sessionId = req.sessionID;
+    const sessionId = cartSessionId(req);
     const cart = await getCart(sessionId);
     res.json(cart);
   } catch (err) {
@@ -375,7 +597,7 @@ app.get('/api/cart', async (req, res) => {
 app.post('/api/cart', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
-    const sessionId = req.sessionID;
+    const sessionId = cartSessionId(req);
     if (!productId || !quantity) {
       return res.status(400).json({ error: 'productId and quantity required' });
     }
@@ -400,7 +622,7 @@ app.put('/api/cart/:productId', async (req, res) => {
   try {
     const { quantity } = req.body;
     const { productId } = req.params;
-    const sessionId = req.sessionID;
+    const sessionId = cartSessionId(req);
     if (quantity === undefined) {
       return res.status(400).json({ error: 'quantity required' });
     }
@@ -416,7 +638,7 @@ app.put('/api/cart/:productId', async (req, res) => {
 app.delete('/api/cart/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
-    const sessionId = req.sessionID;
+    const sessionId = cartSessionId(req);
     await removeFromCart(sessionId, parseInt(productId));
     const updatedCart = await getCart(sessionId);
     res.json(updatedCart);

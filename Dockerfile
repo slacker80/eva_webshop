@@ -3,11 +3,11 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY . .
 
-RUN chown -R node:node /app
+RUN mkdir -p /app/data /app/public/uploads && chown -R node:node /app
 USER node
 
 EXPOSE 3000

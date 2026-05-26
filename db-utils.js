@@ -1,8 +1,11 @@
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const fs = require('fs');
 
-const dbPath = path.join(__dirname, 'database.db');
+const dataDir = process.env.DATA_DIR || __dirname;
+fs.mkdirSync(dataDir, { recursive: true });
+const dbPath = process.env.DATABASE_PATH || path.join(dataDir, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
 // Initialize database
@@ -77,35 +80,6 @@ function initDatabase() {
           // Initialize default admin if not exists
           initDefaultAdmin().then(resolve).catch(reject);
         }
-      });
-
-      // Orders table
-      db.run(`CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT NOT NULL,
-        mollie_order_id TEXT,
-        customer_name TEXT NOT NULL,
-        customer_email TEXT NOT NULL,
-        customer_address TEXT NOT NULL,
-        total_amount REAL NOT NULL,
-        status TEXT DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )`, (err) => {
-        if (err) reject(err);
-      });
-
-      // Order items table
-      db.run(`CREATE TABLE IF NOT EXISTS order_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER DEFAULT 1,
-        price REAL NOT NULL,
-        FOREIGN KEY (order_id) REFERENCES orders(id),
-        FOREIGN KEY (product_id) REFERENCES products(id)
-      )`, (err) => {
-        if (err) reject(err);
       });
     });
   });
@@ -301,7 +275,7 @@ function updateAdminPassword(username, newPassword) {
 function getCart(sessionId) {
   return new Promise((resolve, reject) => {
     db.all(
-      `SELECT c.id, c.product_id AS productId, c.quantity, p.name, p.price, p.stock FROM cart_items c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? ORDER BY c.created_at DESC`,
+      `SELECT c.id, c.product_id, c.quantity, p.name, p.price, p.stock FROM cart_items c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? ORDER BY c.created_at DESC`,
       [sessionId],
       (err, rows) => {
         if (err) reject(err);
@@ -374,46 +348,6 @@ function clearCart(sessionId) {
   });
 }
 
-// Order functions
-function addOrder(order) {
-  return new Promise((resolve, reject) => {
-    const totalAmount = order.totalAmount || order.total_amount || 0;
-    db.run(
-      'INSERT INTO orders (session_id, customer_name, customer_email, customer_address, total_amount, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [order.sessionId, order.name, order.email, order.address, totalAmount, 'pending'],
-      function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      }
-    );
-  });
-}
-
-function getOrders() {
-  return new Promise((resolve, reject) => {
-    db.all(
-      'SELECT * FROM orders ORDER BY created_at DESC',
-      (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows || []);
-      }
-    );
-  });
-}
-
-function getOrderById(orderId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      'SELECT * FROM orders WHERE id=?',
-      [orderId],
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      }
-    );
-  });
-}
-
 module.exports = {
   db,
   initDatabase,
@@ -429,8 +363,5 @@ module.exports = {
   addToCart,
   updateCartQuantity,
   removeFromCart,
-  clearCart,
-  addOrder,
-  getOrders,
-  getOrderById
+  clearCart
 };
