@@ -3,66 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Checkout - Crystal Jewelz</title>
+  <title>Bestelling plaatsen - Crystal Jewelz</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 1rem; background: #f8f9fa; color: #333; max-width: 600px; margin: auto; }
-    h1 { color: #4a148c; margin-bottom: 1rem; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 1rem; background: #f8f9fa; color: #333; max-width: 680px; margin: auto; }
+    h1 { color: #4a148c; margin-bottom: .75rem; }
+    .notice { background: #fff8e1; border: 1px solid #d4af37; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; line-height: 1.45; }
     form { background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    label { display: block; margin: 0.5rem 0 0.25rem; font-weight: 600; }
-    input, textarea { width: 100%; padding: 0.5rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    button { margin-top: 1rem; padding: 0.75rem 1rem; border: none; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border-radius: 25px; font-weight: 600; cursor: pointer; width: 100%; }
-    button:disabled { background: grey; }
+    label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 0.65rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 1rem; padding: 0.85rem 1rem; border: none; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border-radius: 25px; font-weight: 700; cursor: pointer; width: 100%; }
+    button:disabled { background: grey; cursor: wait; }
+    .status { margin-top: 1rem; padding: .85rem; border-radius: 8px; display: none; line-height: 1.4; }
+    .status.ok { display: block; background: #e8f5e9; border: 1px solid #2e7d32; }
+    .status.error { display: block; background: #ffebee; border: 1px solid #c62828; }
   </style>
 </head>
 <body>
-  <h1>Afrekenen</h1>
+  <h1>Bestelling plaatsen</h1>
+
+  <div class="notice">
+    <strong>Let op: deze webshop draait nog in testfase.</strong><br>
+    Bestellingen, betalingen en verzendingen worden handmatig verwerkt.
+    Na controle ontvang je een betaalverzoek, bijvoorbeeld via Rabobank. Er wordt nu nog geen automatische betaling gestart.
+  </div>
 
   <form id="checkoutForm">
     <label for="name">Naam *</label>
-    <input type="text" id="name" name="name" required />
+    <input type="text" id="name" name="name" autocomplete="name" required />
 
     <label for="email">E-mailadres *</label>
-    <input type="email" id="email" name="email" required />
+    <input type="email" id="email" name="email" autocomplete="email" required />
+
+    <label for="phone">Telefoonnummer</label>
+    <input type="tel" id="phone" name="phone" autocomplete="tel" />
 
     <label for="address">Bezorgadres *</label>
-    <textarea id="address" name="address" rows="3" required></textarea>
+    <textarea id="address" name="address" rows="3" autocomplete="shipping street-address" required></textarea>
 
-    <button type="submit">Betaal via iDEAL</button>
+    <label for="notes">Opmerking</label>
+    <textarea id="notes" name="notes" rows="3" placeholder="Bijvoorbeeld maat, cadeauverpakking of voorkeur voor betaalverzoek."></textarea>
+
+    <button type="submit">Bestelling handmatig aanvragen</button>
+    <div id="status" class="status"></div>
   </form>
 
   <script>
-    document.getElementById('checkoutForm').addEventListener('submit', async e => {
+    const form = document.getElementById('checkoutForm');
+    const statusBox = document.getElementById('status');
+
+    function setStatus(type, message) {
+      statusBox.className = 'status ' + type;
+      statusBox.textContent = message;
+    }
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const btn = e.target.querySelector('button');
       btn.disabled = true;
-      btn.textContent = 'Verwerken...';
+      btn.textContent = 'Bestelling versturen...';
+      statusBox.className = 'status';
+      statusBox.textContent = '';
 
       const data = {
         name: e.target.name.value.trim(),
         email: e.target.email.value.trim(),
-        address: e.target.address.value.trim()
+        phone: e.target.phone.value.trim(),
+        address: e.target.address.value.trim(),
+        notes: e.target.notes.value.trim()
       };
 
       try {
-        const res = await fetch('/pay', {
+        const res = await fetch('/api/manual-order', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-
-        if (res.ok) {
-          const json = await res.json();
-          window.location.href = json.paymentUrl;
-        } else {
-          const err = await res.json();
-          alert('Fout bij betaling: ' + (err.error || 'Onbekende fout'));
-          btn.disabled = false;
-          btn.textContent = 'Betaal via iDEAL';
-        }
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Bestelling kon niet worden verstuurd');
+        setStatus('ok', 'Bedankt. Je bestelling is ontvangen. We controleren deze handmatig en sturen daarna een betaalverzoek.');
+        form.reset();
       } catch (error) {
-        alert('Netwerkfout, probeer het opnieuw.');
+        setStatus('error', error.message || 'Er ging iets mis. Probeer het later opnieuw.');
+      } finally {
         btn.disabled = false;
-        btn.textContent = 'Betaal via iDEAL';
+        btn.textContent = 'Bestelling handmatig aanvragen';
       }
     });
   </script>

@@ -8,7 +8,7 @@ Small Express/SQLite webshop for Crystal Jewelz.
 - SQLite database
 - Server-rendered product/category pages
 - Static admin and checkout pages from `public/`
-- Stripe Checkout scaffold
+- Temporary manual order flow
 - Docker image based deployment
 
 ## Important Files
@@ -44,27 +44,22 @@ The deploy keeps runtime data outside the image:
 - database: `/root/eva_data/database.db`
 - uploads: `/root/eva_uploads`
 
-## Stripe
+## Temporary Manual Orders
 
-Set these in `.env` on the server:
+Online payment is disabled while the webshop is in test phase. Customers submit an order request from `public/checkout.html`.
+
+The owner receives an e-mail at `ORDER_NOTIFY_EMAIL` and can then send a manual Rabobank payment request. Orders are also appended to `manual-orders.jsonl` in `DATA_DIR`.
+
+Required e-mail settings in `.env`:
 
 ```env
-BASE_URL=https://crystaljewelz.nl
-STRIPE_CURRENCY=eur
-STRIPE_SECRET_KEY=sk_test_or_live...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
-
-Stripe webhook endpoint:
-
-```text
-https://crystaljewelz.nl/webhook/stripe
-```
-
-Required event:
-
-```text
-checkout.session.completed
+ORDER_NOTIFY_EMAIL=smallegangeeva@gmail.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-gmail-app-password
+SMTP_FROM=Crystal Jewelz <your-email@gmail.com>
 ```
 
 ## Docker Image
