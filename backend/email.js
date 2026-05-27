@@ -28,6 +28,22 @@ function orderLines(order) {
   }).join('\n');
 }
 
+function parseRecipients(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function logMailResult(label, info) {
+  console.log('[mail]', label, JSON.stringify({
+    accepted: info.accepted || [],
+    rejected: info.rejected || [],
+    response: info.response || '',
+    messageId: info.messageId || ''
+  }));
+}
+
 async function sendManualOrderEmail(order) {
   const transporter = mailTransporter();
   if (!transporter) {
@@ -36,7 +52,9 @@ async function sendManualOrderEmail(order) {
     throw err;
   }
 
-  const notifyEmail = process.env.ORDER_NOTIFY_EMAIL || 'smallegangeeva@gmail.com';
+  const notifyRecipients = parseRecipients(process.env.ORDER_NOTIFY_EMAIL || 'smallegangeeva@gmail.com');
+  const notifyBcc = parseRecipients(process.env.ORDER_NOTIFY_BCC || '');
+  const notifyReplyTo = notifyRecipients[0] || process.env.SMTP_USER;
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   const replyTo = order.email;
 
@@ -84,21 +102,24 @@ ${order.address}
 Met vriendelijke groet,
 Crystal Jewelz`;
 
-  await transporter.sendMail({
+  const ownerInfo = await transporter.sendMail({
     from,
-    to: notifyEmail,
+    to: notifyRecipients,
+    bcc: notifyBcc,
     replyTo,
     subject: `Nieuwe Crystal Jewelz testbestelling ${order.id}`,
     text: ownerText
   });
+  logMailResult('owner order ' + order.id, ownerInfo);
 
-  await transporter.sendMail({
+  const customerInfo = await transporter.sendMail({
     from,
     to: order.email,
-    replyTo: notifyEmail,
+    replyTo: notifyReplyTo,
     subject: `Crystal Jewelz testbestelling ${order.id}`,
     text: customerText
   });
+  logMailResult('customer order ' + order.id, customerInfo);
 }
 
 module.exports = { sendManualOrderEmail };

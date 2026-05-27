@@ -48,12 +48,14 @@ The deploy keeps runtime data outside the image:
 
 Online payment is disabled while the webshop is in test phase. Customers submit an order request from `public/checkout.html`.
 
-The owner receives an e-mail at `ORDER_NOTIFY_EMAIL` and can then send a manual Rabobank payment request. Orders are also appended to `manual-orders.jsonl` in `DATA_DIR`.
+`ORDER_NOTIFY_EMAIL` receives the owner notification and can then send a manual Rabobank payment request. Use a comma-separated `ORDER_NOTIFY_BCC` only when a diagnostic/admin copy is needed. Orders are also appended to `manual-orders.jsonl` in `DATA_DIR`.
 
 Required e-mail settings in `.env`:
 
 ```env
 ORDER_NOTIFY_EMAIL=smallegangeeva@gmail.com
+# Optional: comma-separated diagnostics copy for owner notifications
+# ORDER_NOTIFY_BCC=petersmallegange@gmail.com
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
