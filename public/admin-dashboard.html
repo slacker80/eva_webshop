@@ -28,11 +28,11 @@
     .message.success { display: block; background: #e8f5e9; color: #1b5e20; }
     .message.error { display: block; background: #ffebee; color: #b71c1c; }
     .product-card { background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: grid; grid-template-columns: 96px 1fr auto; gap: 1rem; align-items: center; margin-bottom: .75rem; }
-    .product-card img { width: 96px; height: 80px; object-fit: cover; border-radius: 6px; background: #eee; }
+    .product-card img { width: 96px; height: 80px; object-fit: contain; border-radius: 6px; background: #fbf8fc; border: 1px solid #eee; padding: .25rem; }
     .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
     .thumbs { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
     .thumb { position: relative; }
-    .thumb img { width: 72px; height: 58px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
+    .thumb img { width: 72px; height: 58px; object-fit: contain; border-radius: 6px; border: 1px solid #ddd; background: #fbf8fc; padding: .15rem; }
     .thumb button { position: absolute; top: -7px; right: -7px; padding: 0; width: 22px; height: 22px; border-radius: 50%; background: #c62828; color: white; }
     .muted { color: #777; font-size: .9rem; }
     .preview-logo { max-height: 56px; max-width: 180px; object-fit: contain; display: block; margin-top: .5rem; }
@@ -59,7 +59,7 @@
     .preview-about-card strong { display: block; color: var(--preview-primary); font-size: .82rem; margin-bottom: .25rem; }
     .preview-about-card p { margin: 0; color: #666; font-size: .72rem; line-height: 1.35; }
     .preview-product-card { display: grid; grid-template-columns: 72px 1fr; gap: .7rem; align-items: center; }
-    .preview-product-image { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, #eee, #fafafa); }
+    .preview-product-image { width: 72px; height: 72px; border-radius: 8px; object-fit: contain; background: #fbf8fc; border: 1px solid #eee; padding: .2rem; }
     .preview-product-card h5 { margin: 0 0 .25rem; font-size: .9rem; color: #222; }
     .preview-price { color: var(--preview-accent); font-weight: 800; }
     .preview-button { display: inline-block; margin-top: .45rem; padding: .35rem .55rem; border-radius: 999px; background: var(--preview-primary); color: white; font-size: .72rem; }
