@@ -87,7 +87,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = /jpeg|jpg|png|gif|webp|svg/.test(path.extname(file.originalname).toLowerCase());
     const mime = /jpeg|jpg|png|gif|webp|svg/.test(file.mimetype);
@@ -486,5 +486,19 @@ app.put('/api/admin/password', requireAuth, async (req, res) => {
   try { await updateAdminPassword('admin', req.body.newPassword); res.json({ success: true }); } catch { res.status(500).json({ error: 'Failed to update password' }); }
 });
 
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error('Multer upload error:', err);
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Foto is te groot. Gebruik maximaal 20 MB per foto.' });
+    return res.status(400).json({ error: 'Upload mislukt: ' + err.message });
+  }
+  if (err) {
+    console.error('Unhandled request error:', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+  next();
+});
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
 app.listen(PORT, () => console.log(`Crystal Jewelz server running on port ${PORT}`));

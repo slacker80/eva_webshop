@@ -36,8 +36,37 @@
     .thumb button { position: absolute; top: -7px; right: -7px; padding: 0; width: 22px; height: 22px; border-radius: 50%; background: #c62828; color: white; }
     .muted { color: #777; font-size: .9rem; }
     .preview-logo { max-height: 56px; max-width: 180px; object-fit: contain; display: block; margin-top: .5rem; }
+    .image-preview { margin-top: .5rem; min-height: 90px; border: 1px dashed #c9c2cf; border-radius: 8px; background: #fafafa; display: grid; place-items: center; color: #777; overflow: hidden; }
+    .image-preview img { width: 100%; max-height: 220px; object-fit: contain; display: block; background: #fff; }
+    .thumbs.empty { min-height: 58px; align-items: center; color: #777; font-size: .9rem; }
+    .editor-preview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 1rem; align-items: start; }
+    .preview-panel { position: sticky; top: 1rem; }
+    .site-preview { border: 1px solid #ddd; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+    .preview-site { min-height: 520px; background: var(--preview-bg); color: #2c2530; font-family: var(--preview-font); }
+    .preview-site-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; background: white; border-bottom: 1px solid rgba(0,0,0,.08); }
+    .preview-brand { display: flex; align-items: center; gap: .65rem; min-width: 0; font-weight: 800; color: var(--preview-primary); }
+    .preview-brand img { width: 42px; height: 42px; object-fit: contain; border-radius: 8px; background: #f6f0f8; }
+    .preview-logo-fallback { width: 42px; height: 42px; border-radius: 8px; display: grid; place-items: center; color: white; background: var(--preview-primary); font-weight: 800; }
+    .preview-nav { display: flex; gap: .55rem; color: #666; font-size: .75rem; }
+    .preview-hero { padding: 2rem 1rem; color: white; background: linear-gradient(135deg, var(--preview-primary), var(--preview-accent)); }
+    .preview-hero h3 { margin: 0 0 .5rem; font-size: 1.7rem; line-height: 1.15; letter-spacing: 0; }
+    .preview-hero p { margin: 0; max-width: 34rem; line-height: 1.45; }
+    .preview-section { padding: 1rem; }
+    .preview-section h4 { margin: 0 0 .25rem; color: var(--preview-primary); font-size: 1rem; }
+    .preview-section > p { margin: 0 0 .8rem; color: #666; font-size: .88rem; }
+    .preview-about-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
+    .preview-about-card, .preview-product-card { background: white; border: 1px solid rgba(0,0,0,.08); border-radius: 8px; padding: .7rem; }
+    .preview-about-card strong { display: block; color: var(--preview-primary); font-size: .82rem; margin-bottom: .25rem; }
+    .preview-about-card p { margin: 0; color: #666; font-size: .72rem; line-height: 1.35; }
+    .preview-product-card { display: grid; grid-template-columns: 72px 1fr; gap: .7rem; align-items: center; }
+    .preview-product-image { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, #eee, #fafafa); }
+    .preview-product-card h5 { margin: 0 0 .25rem; font-size: .9rem; color: #222; }
+    .preview-price { color: var(--preview-accent); font-weight: 800; }
+    .preview-button { display: inline-block; margin-top: .45rem; padding: .35rem .55rem; border-radius: 999px; background: var(--preview-primary); color: white; font-size: .72rem; }
+    .preview-note { margin-top: .75rem; color: #777; font-size: .82rem; line-height: 1.4; }
     .logout-btn { background: rgba(255,255,255,.25); color: white; }
-    @media (max-width: 760px) { .grid, .grid-3, .product-card { grid-template-columns: 1fr; } }
+    @media (max-width: 960px) { .editor-preview { grid-template-columns: 1fr; } .preview-panel { position: static; } }
+    @media (max-width: 760px) { .grid, .grid-3, .product-card, .preview-about-grid, .preview-product-card { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -70,9 +99,11 @@
           <label>Hoofdfoto</label>
           <input type="file" accept="image/*" onchange="uploadToField(this, 'image_url')">
           <input name="image_url" id="image_url" placeholder="/uploads/foto.jpg">
+          <div id="mainImagePreview" class="image-preview empty">Nog geen hoofdfoto gekozen</div>
           <label>Extra foto's</label>
           <input type="file" accept="image/*" multiple onchange="uploadGallery(this)">
-          <div id="galleryPreview" class="thumbs"></div>
+          <p id="galleryUploadStatus" class="muted">Kies extra foto's en klik daarna op Opslaan om ze bij het product te bewaren.</p>
+          <div id="galleryPreview" class="thumbs empty">Nog geen extra foto's gekozen</div>
           <input type="hidden" name="images" id="images">
           <label><input type="checkbox" name="featured" style="width:auto"> Featured op homepage</label>
           <div class="actions" style="margin-top:1rem;"><button class="btn" type="submit">Opslaan</button><button class="btn-secondary" type="button" onclick="resetProductForm()">Nieuw/leegmaken</button></div>
@@ -82,32 +113,46 @@
     </section>
 
     <section id="homepage" class="tab-content">
-      <div class="panel">
-        <h2>Homepage teksten</h2>
-        <form id="homepageForm" onsubmit="saveHomepage(event)">
-          <label>Hero titel</label><input name="hero_title">
-          <label>Hero subtitel</label><textarea name="hero_subtitle"></textarea>
-          <div class="grid-3">
-            <div><label>Blok 1 titel</label><input name="about1_title"><label>Blok 1 icoon/woord</label><input name="about1_icon"><label>Blok 1 tekst</label><textarea name="about1_text"></textarea></div>
-            <div><label>Blok 2 titel</label><input name="about2_title"><label>Blok 2 icoon/woord</label><input name="about2_icon"><label>Blok 2 tekst</label><textarea name="about2_text"></textarea></div>
-            <div><label>Blok 3 titel</label><input name="about3_title"><label>Blok 3 icoon/woord</label><input name="about3_icon"><label>Blok 3 tekst</label><textarea name="about3_text"></textarea></div>
-          </div>
-          <div class="grid"><div><label>Featured titel</label><input name="featured_title"></div><div><label>Featured subtitel</label><input name="featured_subtitle"></div></div>
-          <button class="btn" type="submit">Homepage opslaan</button>
-        </form>
+      <div class="editor-preview">
+        <div class="panel">
+          <h2>Homepage teksten</h2>
+          <form id="homepageForm" onsubmit="saveHomepage(event)">
+            <label>Hero titel</label><input name="hero_title">
+            <label>Hero subtitel</label><textarea name="hero_subtitle"></textarea>
+            <div class="grid-3">
+              <div><label>Blok 1 titel</label><input name="about1_title"><label>Blok 1 icoon/woord</label><input name="about1_icon"><label>Blok 1 tekst</label><textarea name="about1_text"></textarea></div>
+              <div><label>Blok 2 titel</label><input name="about2_title"><label>Blok 2 icoon/woord</label><input name="about2_icon"><label>Blok 2 tekst</label><textarea name="about2_text"></textarea></div>
+              <div><label>Blok 3 titel</label><input name="about3_title"><label>Blok 3 icoon/woord</label><input name="about3_icon"><label>Blok 3 tekst</label><textarea name="about3_text"></textarea></div>
+            </div>
+            <div class="grid"><div><label>Featured titel</label><input name="featured_title"></div><div><label>Featured subtitel</label><input name="featured_subtitle"></div></div>
+            <button class="btn" type="submit">Homepage opslaan</button>
+          </form>
+        </div>
+        <aside class="panel preview-panel">
+          <h2>Live preview</h2>
+          <div id="homepagePreview" class="site-preview" data-site-preview></div>
+          <p class="preview-note">Deze preview gebruikt de waarden die nu in het formulier staan. Opslaan is pas nodig om de echte site te wijzigen.</p>
+        </aside>
       </div>
     </section>
 
     <section id="appearance" class="tab-content">
-      <div class="panel">
-        <h2>Logo, kleuren en lettertype</h2>
-        <form id="settingsForm" onsubmit="saveSiteSettings(event)">
-          <label>Merknaam</label><input name="brand_name">
-          <label>Logo</label><input type="file" accept="image/*" onchange="uploadToField(this, 'logo_url')"><input name="logo_url" id="logo_url"><img id="logoPreview" class="preview-logo" alt="">
-          <div class="grid-3"><div><label>Primaire kleur</label><input type="color" name="primary_color"></div><div><label>Accentkleur</label><input type="color" name="accent_color"></div><div><label>Achtergrond</label><input type="color" name="background_color"></div></div>
-          <label>Lettertype</label><select name="font_family"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">System / modern</option><option value="Georgia, serif">Georgia / klassiek</option><option value="'Trebuchet MS', sans-serif">Trebuchet / zacht</option><option value="Arial, sans-serif">Arial</option></select>
-          <button class="btn" type="submit">Stijl opslaan</button>
-        </form>
+      <div class="editor-preview">
+        <div class="panel">
+          <h2>Logo, kleuren en lettertype</h2>
+          <form id="settingsForm" onsubmit="saveSiteSettings(event)">
+            <label>Merknaam</label><input name="brand_name">
+            <label>Logo</label><input type="file" accept="image/*" onchange="uploadToField(this, 'logo_url')"><input name="logo_url" id="logo_url"><img id="logoPreview" class="preview-logo" alt="">
+            <div class="grid-3"><div><label>Primaire kleur</label><input type="color" name="primary_color"></div><div><label>Accentkleur</label><input type="color" name="accent_color"></div><div><label>Achtergrond</label><input type="color" name="background_color"></div></div>
+            <label>Lettertype</label><select name="font_family"><option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">System / modern</option><option value="Georgia, serif">Georgia / klassiek</option><option value="'Trebuchet MS', sans-serif">Trebuchet / zacht</option><option value="Arial, sans-serif">Arial</option></select>
+            <button class="btn" type="submit">Stijl opslaan</button>
+          </form>
+        </div>
+        <aside class="panel preview-panel">
+          <h2>Live preview</h2>
+          <div id="appearancePreview" class="site-preview" data-site-preview></div>
+          <p class="preview-note">Kleur, logo en lettertype werken direct door in deze preview voordat je opslaat.</p>
+        </aside>
       </div>
     </section>
 
@@ -118,28 +163,118 @@
 
   <script>
     let galleryImages = [];
-    function switchTab(id) { document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); event?.target?.classList.add('active'); }
+    let previewProduct = null;
+    function switchTab(id) { document.querySelectorAll('.tab-content').forEach(e => e.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active')); document.getElementById(id).classList.add('active'); event?.target?.classList.add('active'); renderPreviews(); }
     function showMessage(text, type = 'success') { const el = document.getElementById('message'); el.textContent = text; el.className = 'message ' + type; setTimeout(() => { el.className = 'message'; }, 3500); }
     function logout() { fetch('/admin/logout').then(() => location.href = '/admin/login'); }
     function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+    function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#96;'); }
     async function api(url, options = {}) { const res = await fetch(url, options); const data = await res.json().catch(() => ({})); if (!res.ok) throw new Error(data.error || 'Request failed'); return data; }
-    async function uploadFile(file) { const fd = new FormData(); fd.append('image', file); const res = await fetch('/api/admin/upload', { method: 'POST', body: fd }); const data = await res.json(); if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed'); return data.url; }
-    async function uploadToField(input, fieldId) { try { const url = await uploadFile(input.files[0]); document.getElementById(fieldId).value = url; if (fieldId === 'logo_url') document.getElementById('logoPreview').src = url; showMessage('Foto geupload'); } catch (err) { showMessage(err.message, 'error'); } finally { input.value = ''; } }
-    async function uploadGallery(input) { try { for (const file of input.files) galleryImages.push(await uploadFile(file)); renderGallery(); showMessage('Gallery bijgewerkt'); } catch (err) { showMessage(err.message, 'error'); } finally { input.value = ''; } }
-    function renderGallery() { document.getElementById('images').value = JSON.stringify(galleryImages); document.getElementById('galleryPreview').innerHTML = galleryImages.map((url, i) => `<span class="thumb"><img src="${url}"><button type="button" onclick="removeGallery(${i})">x</button></span>`).join(''); }
+    function setUploadStatus(text) { const el = document.getElementById('galleryUploadStatus'); if (el) el.textContent = text; }
+    async function uploadFile(file) { if (!file) throw new Error('Geen bestand gekozen'); const fd = new FormData(); fd.append('image', file); const res = await fetch('/api/admin/upload', { method: 'POST', credentials: 'same-origin', body: fd }); const text = await res.text(); let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { throw new Error(text || 'Upload failed'); } if (!res.ok || !data.url) throw new Error(data.error || 'Upload failed'); return data.url; }
+    async function uploadToField(input, fieldId) { try { if (!input.files?.[0]) return; setUploadStatus('Uploaden...'); const url = await uploadFile(input.files[0]); document.getElementById(fieldId).value = url; if (fieldId === 'logo_url') document.getElementById('logoPreview').src = url; if (fieldId === 'image_url') renderMainImagePreview(); renderPreviews(); setUploadStatus(fieldId === 'image_url' ? 'Hoofdfoto geupload. Klik op Opslaan om de wijziging te bewaren.' : 'Logo geupload. Klik op Opslaan om de wijziging te bewaren.'); showMessage('Foto geupload'); } catch (err) { setUploadStatus('Upload mislukt: ' + err.message); showMessage(err.message, 'error'); } finally { input.value = ''; } }
+    async function uploadGallery(input) { try { const files = Array.from(input.files || []); if (!files.length) return; setUploadStatus(`Uploaden: 0 van ${files.length}`); for (let i = 0; i < files.length; i++) { galleryImages.push(await uploadFile(files[i])); renderGallery(); setUploadStatus(`Uploaden: ${i + 1} van ${files.length}`); } renderGallery(); setUploadStatus(`${galleryImages.length} extra foto${galleryImages.length === 1 ? '' : "'s"} klaar. Klik op Opslaan om ze bij het product te bewaren.`); showMessage('Gallery bijgewerkt'); } catch (err) { setUploadStatus('Upload mislukt: ' + err.message); showMessage(err.message, 'error'); } finally { input.value = ''; } }
+    function renderMainImagePreview() { const url = document.getElementById('image_url')?.value || ''; const el = document.getElementById('mainImagePreview'); if (!el) return; el.className = 'image-preview' + (url ? '' : ' empty'); el.innerHTML = url ? `<img src="${escapeAttr(url)}" alt="Hoofdfoto preview">` : 'Nog geen hoofdfoto gekozen'; }
+    function renderGallery() { document.getElementById('images').value = JSON.stringify(galleryImages); const el = document.getElementById('galleryPreview'); el.className = 'thumbs' + (galleryImages.length ? '' : ' empty'); el.innerHTML = galleryImages.length ? galleryImages.map((url, i) => `<span class="thumb"><img src="${escapeAttr(url)}" alt="Extra foto ${i + 1}"><button type="button" onclick="removeGallery(${i})">x</button></span>`).join('') : 'Nog geen extra foto\'s gekozen'; setUploadStatus(galleryImages.length ? `${galleryImages.length} extra foto${galleryImages.length === 1 ? '' : "'s"} gekozen. Klik op Opslaan om te bewaren.` : 'Kies extra foto\'s en klik daarna op Opslaan om ze bij het product te bewaren.'); }
     function removeGallery(i) { galleryImages.splice(i, 1); renderGallery(); }
     function formDataObject(form) { const data = Object.fromEntries(new FormData(form)); data.featured = Boolean(form.featured?.checked); data.is_unique = data.is_unique === '1'; data.images = JSON.parse(data.images || '[]'); return data; }
-    function resetProductForm() { document.getElementById('productForm').reset(); document.querySelector('#productForm [name=id]').value = ''; galleryImages = []; renderGallery(); document.querySelector('#productForm h2')?.remove(); }
+    function resetProductForm() { document.getElementById('productForm').reset(); document.querySelector('#productForm [name=id]').value = ''; galleryImages = []; renderGallery(); renderMainImagePreview(); document.querySelector('#productForm h2')?.remove(); }
     async function saveProduct(event) { event.preventDefault(); const form = event.target; const data = formDataObject(form); const id = form.id.value; try { if (id) await api('/api/admin/products/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) }); else await api('/api/admin/products', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) }); showMessage('Product opgeslagen'); resetProductForm(); loadProducts(); } catch (err) { showMessage(err.message, 'error'); } }
-    async function loadProducts() { try { const products = await api('/api/admin/products'); document.getElementById('productList').innerHTML = products.map(p => `<div class="product-card"><img src="${p.image_url || ''}" alt=""><div><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.description || '')}</p><p class="muted">${escapeHtml(p.category)} - voorraad: ${p.stock} ${p.is_unique ? '- uniek exemplaar' : ''}</p><strong>€${Number(p.price || 0).toFixed(2)}</strong></div><div class="actions"><button class="btn-secondary" onclick="editProduct(${p.id})">Bewerk</button><button class="btn-danger" onclick="deleteProduct(${p.id})">Verwijder</button><a class="btn-secondary" href="/product/${p.id}" target="_blank">Bekijk</a></div></div>`).join(''); } catch (err) { showMessage(err.message, 'error'); } }
-    async function editProduct(id) { try { const p = await api('/api/admin/products/' + id); const form = document.getElementById('productForm'); for (const [k, v] of Object.entries(p)) if (form.elements[k]) form.elements[k].value = v ?? ''; form.featured.checked = Boolean(p.featured); form.is_unique.value = p.is_unique ? '1' : '0'; galleryImages = (p.images || []).map(img => img.image_url); renderGallery(); window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { showMessage(err.message, 'error'); } }
+    async function loadProducts() { try { const products = await api('/api/admin/products'); previewProduct = products[0] || null; document.getElementById('productList').innerHTML = products.map(p => `<div class="product-card"><img src="${p.image_url || ''}" alt=""><div><h3>${escapeHtml(p.name)}</h3><p>${escapeHtml(p.description || '')}</p><p class="muted">${escapeHtml(p.category)} - voorraad: ${p.stock} ${p.is_unique ? '- uniek exemplaar' : ''} - extra foto's: ${(p.images || []).length}</p><strong>€${Number(p.price || 0).toFixed(2)}</strong></div><div class="actions"><button class="btn-secondary" onclick="editProduct(${p.id})">Bewerk</button><button class="btn-danger" onclick="deleteProduct(${p.id})">Verwijder</button><a class="btn-secondary" href="/product/${p.id}" target="_blank">Bekijk</a></div></div>`).join(''); renderPreviews(); } catch (err) { showMessage(err.message, 'error'); } }
+    async function editProduct(id) { try { const p = await api('/api/admin/products/' + id); const form = document.getElementById('productForm'); for (const [k, v] of Object.entries(p)) if (form.elements[k]) form.elements[k].value = v ?? ''; form.featured.checked = Boolean(p.featured); form.is_unique.value = p.is_unique ? '1' : '0'; galleryImages = (p.images || []).map(img => img.image_url); renderGallery(); renderMainImagePreview(); setUploadStatus("Product geladen. Voeg foto\'s toe of verwijder ze en klik daarna op Opslaan."); window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (err) { showMessage(err.message, 'error'); } }
     async function deleteProduct(id) { if (!confirm('Product verwijderen?')) return; try { await api('/api/admin/products/' + id, { method: 'DELETE' }); showMessage('Product verwijderd'); loadProducts(); } catch (err) { showMessage(err.message, 'error'); } }
-    async function loadHomepage() { const hp = await api('/api/admin/homepage'); const form = document.getElementById('homepageForm'); Object.entries(hp).forEach(([k, v]) => { if (form.elements[k]) form.elements[k].value = v || ''; }); }
-    async function saveHomepage(event) { event.preventDefault(); try { await api('/api/admin/homepage', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); showMessage('Homepage opgeslagen'); } catch (err) { showMessage(err.message, 'error'); } }
-    async function loadSiteSettings() { const s = await api('/api/admin/site-settings'); const form = document.getElementById('settingsForm'); Object.entries(s).forEach(([k, v]) => { if (form.elements[k]) form.elements[k].value = v || ''; }); document.getElementById('logoPreview').src = s.logo_url || ''; }
-    async function saveSiteSettings(event) { event.preventDefault(); try { await api('/api/admin/site-settings', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); showMessage('Stijl opgeslagen'); } catch (err) { showMessage(err.message, 'error'); } }
+    function formValues(formId) {
+      const form = document.getElementById(formId);
+      return form ? Object.fromEntries(new FormData(form)) : {};
+    }
+    function colorValue(value, fallback) {
+      return /^#[0-9a-fA-F]{6}$/.test(String(value || '')) ? value : fallback;
+    }
+    function fontValue(value) {
+      const allowed = [
+        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        'Georgia, serif',
+        "'Trebuchet MS', sans-serif",
+        'Arial, sans-serif'
+      ];
+      return allowed.includes(value) ? value : allowed[0];
+    }
+    function buildSitePreview() {
+      const hp = formValues('homepageForm');
+      const settings = formValues('settingsForm');
+      const brand = settings.brand_name || 'Crystal Jewelz';
+      const logoUrl = settings.logo_url || '';
+      const primary = colorValue(settings.primary_color, '#4a148c');
+      const accent = colorValue(settings.accent_color, '#d4af37');
+      const bg = colorValue(settings.background_color, '#f8f9fa');
+      const font = fontValue(settings.font_family);
+      const heroTitle = hp.hero_title || 'Handgemaakte sieraden';
+      const heroSubtitle = hp.hero_subtitle || 'Unieke stukken met aandacht gemaakt.';
+      const featuredTitle = hp.featured_title || 'Featured producten';
+      const featuredSubtitle = hp.featured_subtitle || 'Een kleine selectie uit de collectie.';
+      const product = previewProduct || {};
+      const productName = product.name || 'Voorbeeld product';
+      const productImage = product.image_url || '';
+      const productPrice = Number(product.price || 25).toFixed(2).replace('.', ',');
+      const logo = logoUrl
+        ? `<img src="${escapeAttr(logoUrl)}" alt="${escapeAttr(brand)}">`
+        : `<span class="preview-logo-fallback">${escapeHtml(brand.trim().charAt(0) || 'C')}</span>`;
+      const image = productImage
+        ? `<img class="preview-product-image" src="${escapeAttr(productImage)}" alt="${escapeAttr(productName)}">`
+        : '<div class="preview-product-image"></div>';
+      return `
+        <div class="preview-site" style="--preview-primary:${primary};--preview-accent:${accent};--preview-bg:${bg};--preview-font:${escapeAttr(font)};">
+          <div class="preview-site-header">
+            <div class="preview-brand">${logo}<span>${escapeHtml(brand)}</span></div>
+            <div class="preview-nav"><span>Home</span><span>Shop</span><span>Contact</span></div>
+          </div>
+          <section class="preview-hero">
+            <h3>${escapeHtml(heroTitle)}</h3>
+            <p>${escapeHtml(heroSubtitle)}</p>
+          </section>
+          <section class="preview-section">
+            <div class="preview-about-grid">
+              <div class="preview-about-card"><strong>${escapeHtml(hp.about1_title || 'Ambacht')}</strong><p>${escapeHtml(hp.about1_text || 'Korte tekst voor het eerste blok.')}</p></div>
+              <div class="preview-about-card"><strong>${escapeHtml(hp.about2_title || 'Uniek')}</strong><p>${escapeHtml(hp.about2_text || 'Korte tekst voor het tweede blok.')}</p></div>
+              <div class="preview-about-card"><strong>${escapeHtml(hp.about3_title || 'Met zorg')}</strong><p>${escapeHtml(hp.about3_text || 'Korte tekst voor het derde blok.')}</p></div>
+            </div>
+          </section>
+          <section class="preview-section">
+            <h4>${escapeHtml(featuredTitle)}</h4>
+            <p>${escapeHtml(featuredSubtitle)}</p>
+            <div class="preview-product-card">
+              ${image}
+              <div><h5>${escapeHtml(productName)}</h5><div class="preview-price">€${productPrice}</div><span class="preview-button">Bekijk product</span></div>
+            </div>
+          </section>
+        </div>`;
+    }
+    function renderPreviews() {
+      const html = buildSitePreview();
+      document.querySelectorAll('[data-site-preview]').forEach(el => { el.innerHTML = html; });
+      const logo = document.getElementById('logo_url')?.value || '';
+      const logoPreview = document.getElementById('logoPreview');
+      if (logoPreview) logoPreview.src = logo;
+    }
+    function attachPreviewListeners() {
+      ['homepageForm', 'settingsForm'].forEach(id => {
+        const form = document.getElementById(id);
+        if (!form) return;
+        form.addEventListener('input', renderPreviews);
+        form.addEventListener('change', renderPreviews);
+      });
+      const imageField = document.getElementById('image_url');
+      if (imageField) {
+        imageField.addEventListener('input', renderMainImagePreview);
+        imageField.addEventListener('change', renderMainImagePreview);
+      }
+    }
+    async function loadHomepage() { const hp = await api('/api/admin/homepage'); const form = document.getElementById('homepageForm'); Object.entries(hp).forEach(([k, v]) => { if (form.elements[k]) form.elements[k].value = v || ''; }); renderPreviews(); }
+    async function saveHomepage(event) { event.preventDefault(); try { await api('/api/admin/homepage', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); renderPreviews(); showMessage('Homepage opgeslagen'); } catch (err) { showMessage(err.message, 'error'); } }
+    async function loadSiteSettings() { const s = await api('/api/admin/site-settings'); const form = document.getElementById('settingsForm'); Object.entries(s).forEach(([k, v]) => { if (form.elements[k]) form.elements[k].value = v || ''; }); document.getElementById('logoPreview').src = s.logo_url || ''; renderPreviews(); }
+    async function saveSiteSettings(event) { event.preventDefault(); try { await api('/api/admin/site-settings', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); renderPreviews(); showMessage('Stijl opgeslagen'); } catch (err) { showMessage(err.message, 'error'); } }
     async function changePassword(event) { event.preventDefault(); try { await api('/api/admin/password', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); showMessage('Wachtwoord aangepast'); event.target.reset(); } catch (err) { showMessage(err.message, 'error'); } }
-    document.addEventListener('DOMContentLoaded', () => { loadProducts(); loadHomepage(); loadSiteSettings(); });
+    document.addEventListener('DOMContentLoaded', () => { attachPreviewListeners(); renderGallery(); renderMainImagePreview(); renderPreviews(); loadProducts(); loadHomepage(); loadSiteSettings(); });
   </script>
 </body>
 </html>
