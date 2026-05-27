@@ -13,7 +13,7 @@ Small Express/SQLite webshop for Crystal Jewelz.
 
 ## Important Files
 
-- `server.js` - Express app, product pages, cart API, admin routes, Stripe routes
+- `server.js` - Express app, product pages, cart API, admin routes, manual orders and uploads
 - `db-utils.js` - SQLite setup and data access
 - `public/` - admin, checkout, payment result and legacy index pages
 - `Dockerfile` - production image build
@@ -75,6 +75,8 @@ docker push ghcr.io/slacker80/eva-webshop:20260526-1925
 ## Admin Access
 
 The admin portal is intended to be reachable only from the configured home IP address. The live nginx configuration also restricts `/admin`, `/admin/`, and `/api/admin/` before requests reach the Node app.
+
+Admin product and logo uploads are stored in `/root/eva_uploads` through the Docker volume `/root/eva_uploads:/app/public/uploads`. The app accepts uploads up to 20 MB per image. The nginx server block must also include `client_max_body_size 20M;` so `/api/admin/upload` can receive larger phone photos.
 
 
 ## TLS Renewal
