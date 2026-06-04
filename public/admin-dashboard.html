@@ -230,6 +230,44 @@
             gap: 1rem;
         }
 
+        .gallery-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .gallery-thumb {
+            position: relative;
+            width: 82px;
+            height: 82px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            background: #f5f5f5;
+        }
+
+        .gallery-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-thumb button {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 1.35rem;
+            height: 1.35rem;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.72);
+            color: white;
+            cursor: pointer;
+            line-height: 1;
+        }
+
         .category-list {
             display: grid;
             gap: 1rem;
@@ -388,20 +426,37 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Description</label>
+                        <label>Short Description</label>
                         <textarea name="description"></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>Image</label>
+                        <label>Extended Description</label>
+                        <textarea name="long_description" rows="5"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Main Image</label>
                         <input type="file" accept="image/*" onchange="uploadImage(this, 'image_url')" style="margin-bottom:0.5rem;">
                         <div id="img_preview_add" style="margin-bottom:0.5rem; display:none;"><img src="" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                         <input type="text" name="image_url" id="image_url" placeholder="https://... or upload above">
                     </div>
 
+                    <div class="form-group">
+                        <label>Extra Product Photos</label>
+                        <input type="file" accept="image/*" multiple onchange="uploadGalleryImages(this, 'images', 'galleryPreviewAdd')" style="margin-bottom:0.5rem;">
+                        <div id="galleryPreviewAdd" class="gallery-preview"></div>
+                        <input type="hidden" name="images" id="images" value="[]">
+                    </div>
+
                     <div class="form-group checkbox-group">
                         <input type="checkbox" name="featured" id="featured">
                         <label for="featured" style="margin: 0;">Featured on homepage</label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" name="is_unique" id="is_unique">
+                        <label for="is_unique" style="margin: 0;">Unique item</label>
                     </div>
 
                     <button type="submit" class="btn">Add Product</button>
@@ -571,6 +626,49 @@
             });
         }
 
+        function galleryValues(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return [];
+            try {
+                const parsed = JSON.parse(field.value || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function setGalleryValues(fieldId, values) {
+            const field = document.getElementById(fieldId);
+            if (field) field.value = JSON.stringify(values.filter(Boolean));
+        }
+
+        function renderGalleryPreview(fieldId, previewId) {
+            const preview = document.getElementById(previewId);
+            if (!preview) return;
+            const values = galleryValues(fieldId);
+            preview.innerHTML = values.map((url, index) => `
+                <span class="gallery-thumb">
+                    <img src="${escapeHtml(url)}" alt="Product photo ${index + 1}">
+                    <button type="button" onclick="removeGalleryImage('${fieldId}', '${previewId}', ${index})" aria-label="Remove photo">&times;</button>
+                </span>
+            `).join('');
+        }
+
+        function removeGalleryImage(fieldId, previewId, index) {
+            const values = galleryValues(fieldId);
+            values.splice(index, 1);
+            setGalleryValues(fieldId, values);
+            renderGalleryPreview(fieldId, previewId);
+        }
+
+        function productPayload(form) {
+            const data = Object.fromEntries(new FormData(form));
+            data.featured = Boolean(form.featured?.checked);
+            data.is_unique = Boolean(form.is_unique?.checked);
+            data.images = galleryValues(form.querySelector('input[name="images"]')?.id || 'images');
+            return data;
+        }
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -698,18 +796,21 @@
             }
 
             const form = e.target;
-            const data = new FormData(form);
+            const data = productPayload(form);
 
             try {
                 const res = await fetch('/api/admin/products', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(Object.fromEntries(data))
+                    body: JSON.stringify(data)
                 });
 
                 if (res.ok) {
                     showMessage('Product added!', 'success');
                     form.reset();
+                    setGalleryValues('images', []);
+                    renderGalleryPreview('images', 'galleryPreviewAdd');
+                    document.getElementById('img_preview_add').style.display = 'none';
                     loadProducts();
                     loadCategories();
                 } else {
@@ -783,20 +884,37 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Description</label>
+                                <label>Short Description</label>
                                 <textarea name="description">${escapeHtml(product.description || '')}</textarea>
                             </div>
 
                             <div class="form-group">
-                                <label>Image</label>
+                                <label>Extended Description</label>
+                                <textarea name="long_description" rows="5">${escapeHtml(product.long_description || '')}</textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Main Image</label>
                                 <input type="file" accept="image/*" onchange="uploadImage(this, 'edit_image_url')" style="margin-bottom:0.5rem;">
                                 <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${escapeHtml(product.image_url || '')}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                                 <input type="text" name="image_url" id="edit_image_url" value="${escapeHtml(product.image_url || '')}">
                             </div>
 
+                            <div class="form-group">
+                                <label>Extra Product Photos</label>
+                                <input type="file" accept="image/*" multiple onchange="uploadGalleryImages(this, 'edit_images', 'galleryPreviewEdit')" style="margin-bottom:0.5rem;">
+                                <div id="galleryPreviewEdit" class="gallery-preview"></div>
+                                <input type="hidden" name="images" id="edit_images" value="${escapeHtml(JSON.stringify((product.images || []).map(img => img.image_url || img).filter(Boolean)))}">
+                            </div>
+
                             <div class="form-group checkbox-group">
                                 <input type="checkbox" name="featured" id="editFeatured" ${product.featured ? 'checked' : ''}>
                                 <label for="editFeatured">Featured on homepage</label>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" name="is_unique" id="editUnique" ${product.is_unique ? 'checked' : ''}>
+                                <label for="editUnique">Unique item</label>
                             </div>
                         </div>
 
@@ -809,6 +927,7 @@
             `;
 
             document.body.appendChild(modal);
+            renderGalleryPreview('edit_images', 'galleryPreviewEdit');
         }
 
         // Close edit modal
@@ -827,7 +946,7 @@
             }
 
             const form = e.target;
-            const data = Object.fromEntries(new FormData(form));
+            const data = productPayload(form);
 
             try {
                 const res = await fetch(`/api/admin/products/${productId}`, {
@@ -872,6 +991,41 @@
 
         let _isUploading = false;
 
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+            const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (!res.ok || !data.url) {
+                throw new Error(data.error || 'Upload failed');
+            }
+            return data.url;
+        }
+
+        async function uploadGalleryImages(input, fieldId, previewId) {
+            const files = Array.from(input.files || []);
+            if (!files.length) return;
+
+            _isUploading = true;
+            document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = true);
+
+            try {
+                const values = galleryValues(fieldId);
+                for (const file of files) {
+                    values.push(await uploadFile(file));
+                }
+                setGalleryValues(fieldId, values);
+                renderGalleryPreview(fieldId, previewId);
+                showMessage('Extra product photos uploaded!', 'success');
+            } catch (err) {
+                showMessage('Upload failed: ' + err.message, 'error');
+            } finally {
+                _isUploading = false;
+                document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = false);
+                input.value = '';
+            }
+        }
+
         // Image upload helper
         async function uploadImage(input, targetFieldId) {
             const file = input.files[0];
@@ -903,25 +1057,18 @@
                 reader.readAsDataURL(file);
             }
 
-            const formData = new FormData();
-            formData.append('image', file);
             try {
-                const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
-                const data = await res.json();
-                if (data.url) {
-                    document.getElementById(targetFieldId).value = data.url;
-                    if (statusEl) statusEl.textContent = '✅ Uploaded!';
-                    showMessage('📸 Image uploaded!', 'success');
-                } else {
-                    if (statusEl) statusEl.textContent = '❌ Failed';
-                    showMessage('Upload failed: ' + (data.error || 'unknown'), 'error');
-                }
+                const url = await uploadFile(file);
+                document.getElementById(targetFieldId).value = url;
+                if (statusEl) statusEl.textContent = '✅ Uploaded!';
+                showMessage('📸 Image uploaded!', 'success');
             } catch (err) {
                 if (statusEl) statusEl.textContent = '❌ Error';
-                showMessage('Upload error: network issue', 'error');
+                showMessage('Upload error: ' + err.message, 'error');
             } finally {
                 _isUploading = false;
                 document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = false);
+                input.value = '';
                 // Always clean up status after a delay
                 if (statusEl) setTimeout(() => { if (statusEl.parentNode) statusEl.remove(); }, 3000);
             }

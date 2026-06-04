@@ -9,7 +9,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
-const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getCategories, addCategory, updateCategory, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
+const { initDatabase, getProducts, getProduct, addProduct, updateProduct, deleteProduct, getCategories, addCategory, updateCategory, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
 const { sendManualOrderEmail } = require('./backend/email');
 
 const app = express();
@@ -95,6 +95,7 @@ const RESERVED_CATEGORY_SLUGS = new Set([
   'api',
   'health',
   'pay',
+  'product',
   'products',
   'uploads',
   'checkout-html',
@@ -112,17 +113,32 @@ function productMatchesCategory(product, categoryName) {
   return categorySlug(product.category) === categorySlug(categoryName);
 }
 
+function productImages(product) {
+  const images = [];
+  const primary = String(product.image_url || '').trim();
+  if (primary) images.push(primary);
+  if (Array.isArray(product.images)) {
+    for (const image of product.images) {
+      const src = String(image.image_url || image || '').trim();
+      if (src && !images.includes(src)) images.push(src);
+    }
+  }
+  return images;
+}
+
 function renderProductCard(product) {
   const stock = Number(product.stock || 0);
-  const imageUrl = String(product.image_url || '').trim();
+  const images = productImages(product);
+  const imageUrl = images[0] || '';
+  const detailUrl = `/product/${product.id}`;
   const addButton = stock > 0
     ? `<button type="button" class="add-btn" data-add-to-cart="${product.id}">Add to Cart</button>`
     : '<button type="button" class="add-btn" disabled>Out of stock</button>';
 
   return `
                 <div class="product-card">
-                    ${imageUrl ? `<button type="button" class="product-image product-image-zoom-trigger" data-image-zoom="${escapeHtml(imageUrl)}" data-image-title="${escapeHtml(product.name)}" aria-label="Zoom ${escapeHtml(product.name)}"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy"></button>` : ''}
-                    <div class="product-name">${escapeHtml(product.name)}</div>
+                    ${imageUrl ? `<a class="product-image" href="${detailUrl}"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy"></a>` : ''}
+                    <div class="product-name"><a href="${detailUrl}">${escapeHtml(product.name)}</a></div>
                     <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
                     <div class="product-description">${escapeHtml(product.description)}</div>
                     <div class="product-footer">
@@ -261,19 +277,6 @@ app.get('/api/products/featured', async (req, res) => {
   }
 });
 
-app.get('/api/products/:id', async (req, res) => {
-  try {
-    const products = await getProducts();
-    const product = products.find(p => p.id === parseInt(req.params.id));
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    res.json(product);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch product' });
-  }
-});
-
 app.get('/api/products/category/:category', async (req, res) => {
   try {
     const products = await getProducts();
@@ -281,6 +284,18 @@ app.get('/api/products/category/:category', async (req, res) => {
     res.json(categoryProducts);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch products' });
+  }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const product = await getProduct(parseInt(req.params.id, 10));
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(product);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch product' });
   }
 });
 
@@ -338,9 +353,10 @@ async function renderPage(title, content, activeCat = '') {
         .product-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; }
         .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
         .product-image { display: block; width: 100%; height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f0f0f0; border: 0; padding: 0; }
-        .product-image-zoom-trigger { cursor: zoom-in; }
         .product-image img { width: 100%; height: 100%; object-fit: cover; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; }
+        .product-name a { color: inherit; text-decoration: none; }
+        .product-name a:hover { color: #7b1fa2; }
         .product-category { display: inline-block; background: rgba(123, 31, 162, 0.1); color: #7b1fa2; padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
         .product-description { color: #718096; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.5; }
         .product-footer { display: flex; justify-content: space-between; align-items: center; }
@@ -368,6 +384,18 @@ async function renderPage(title, content, activeCat = '') {
         .image-zoom-panel { position: relative; max-width: min(92vw, 1100px); max-height: 92vh; }
         .image-zoom-panel img { display: block; max-width: 100%; max-height: 92vh; object-fit: contain; border-radius: 8px; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
         .image-zoom-close { position: absolute; top: -0.75rem; right: -0.75rem; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 50%; background: white; color: #4a148c; font-size: 1.75rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+        .product-detail { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr); gap: 2rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .detail-main-image { width: 100%; aspect-ratio: 4 / 3; border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: #f3f3f3; cursor: zoom-in; }
+        .detail-main-image img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fafafa; }
+        .detail-thumbs { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.8rem; }
+        .detail-thumb { width: 72px; height: 72px; border: 2px solid transparent; border-radius: 8px; padding: 0; overflow: hidden; background: #f3f3f3; cursor: pointer; }
+        .detail-thumb.active { border-color: #7b1fa2; }
+        .detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .detail-info h1 { color: #4a148c; line-height: 1.15; margin: 0.35rem 0 0.75rem; }
+        .detail-short { color: #4a5568; white-space: pre-wrap; margin: 1rem 0; }
+        .detail-long { color: #333; white-space: pre-wrap; margin: 1rem 0 1.25rem; line-height: 1.65; }
+        .stock-note { color: #718096; font-size: 0.95rem; margin: 0.5rem 0 1rem; }
+        @media (max-width: 760px) { .product-detail { grid-template-columns: 1fr; padding: 1rem; } }
         
         footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
@@ -545,6 +573,15 @@ async function renderPage(title, content, activeCat = '') {
                 }
             });
             document.addEventListener('click', event => {
+                const thumbButton = event.target.closest('[data-gallery-src]');
+                if (thumbButton) {
+                    const mainImage = document.getElementById('galleryMain');
+                    const mainButton = mainImage?.closest('[data-image-zoom]');
+                    if (mainImage) mainImage.src = thumbButton.dataset.gallerySrc;
+                    if (mainButton) mainButton.dataset.imageZoom = thumbButton.dataset.gallerySrc;
+                    document.querySelectorAll('[data-gallery-src]').forEach(button => button.classList.remove('active'));
+                    thumbButton.classList.add('active');
+                }
                 const imageButton = event.target.closest('[data-image-zoom]');
                 if (imageButton) openImageZoom(imageButton.dataset.imageZoom, imageButton.dataset.imageTitle);
                 const addButton = event.target.closest('[data-add-to-cart]');
@@ -577,6 +614,52 @@ app.get('/products', async (req, res) => {
   } catch (err) {
     console.error('All products page error:', err);
     res.status(500).send(await renderPage('Error', '<p>Failed to load products.</p>'));
+  }
+});
+
+app.get('/product/:id', async (req, res) => {
+  try {
+    const product = await getProduct(parseInt(req.params.id, 10));
+    if (!product) {
+      return res.status(404).send(await renderPage('Product not found', '<p>Product not found.</p>'));
+    }
+
+    const images = productImages(product);
+    const mainImage = images[0] || '';
+    const thumbs = images.map((src, index) => `
+                    <button type="button" class="detail-thumb${index === 0 ? ' active' : ''}" data-gallery-src="${escapeHtml(src)}" aria-label="Show photo ${index + 1}">
+                        <img src="${escapeHtml(src)}" alt="${escapeHtml(product.name)} photo ${index + 1}" loading="lazy">
+                    </button>`).join('');
+    const stock = Number(product.stock || 0);
+    const addButton = stock > 0
+      ? `<button type="button" class="add-btn" data-add-to-cart="${product.id}">Add to Cart</button>`
+      : '<button type="button" class="add-btn" disabled>Out of stock</button>';
+    const longDescription = String(product.long_description || '').trim();
+
+    const content = `
+            <article class="product-detail">
+                <div>
+                    ${mainImage ? `
+                    <button type="button" class="detail-main-image" data-image-zoom="${escapeHtml(mainImage)}" data-image-title="${escapeHtml(product.name)}" aria-label="Zoom ${escapeHtml(product.name)}">
+                        <img id="galleryMain" src="${escapeHtml(mainImage)}" alt="${escapeHtml(product.name)}">
+                    </button>` : '<div class="detail-main-image"></div>'}
+                    ${thumbs ? `<div class="detail-thumbs">${thumbs}</div>` : ''}
+                </div>
+                <div class="detail-info">
+                    <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
+                    <h1>${escapeHtml(product.name)}</h1>
+                    <div class="product-price">$${Number(product.price || 0).toFixed(2)}</div>
+                    <div class="stock-note">${stock > 0 ? `${stock} op voorraad` : 'Niet op voorraad'}</div>
+                    <div class="detail-short">${escapeHtml(product.description)}</div>
+                    ${longDescription ? `<div class="detail-long">${escapeHtml(longDescription)}</div>` : ''}
+                    ${addButton}
+                </div>
+            </article>`;
+
+    res.send(await renderPage(product.name, content, ''));
+  } catch (err) {
+    console.error('Product detail error:', err);
+    res.status(500).send(await renderPage('Error', '<p>Failed to load product.</p>'));
   }
 });
 
@@ -835,8 +918,7 @@ app.get('/api/admin/products', requireAuth, async (req, res) => {
 // GET single product for editing
 app.get('/api/admin/products/:id', requireAuth, async (req, res) => {
   try {
-    const products = await getProducts();
-    const product = products.find(p => p.id === parseInt(req.params.id));
+    const product = await getProduct(parseInt(req.params.id, 10));
     if (!product) return res.status(404).json({ error: 'Not found' });
     res.json(product);
   } catch (err) {
@@ -846,7 +928,7 @@ app.get('/api/admin/products/:id', requireAuth, async (req, res) => {
 
 app.post('/api/admin/products', requireAuth, async (req, res) => {
   console.log('POST /api/admin/products body:', JSON.stringify(req.body));
-  const { name, description, price, category, stock, image_url, featured } = req.body;
+  const { name, description, long_description, price, category, stock, image_url, images, featured, is_unique } = req.body;
   
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Name and price required' });
@@ -856,11 +938,14 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
     const id = await addProduct({
       name,
       description: description || '',
+      long_description: long_description || '',
       price: parseFloat(price),
       category: category || 'other',
       stock: parseInt(stock) || 0,
       image_url: image_url || '',
-      featured: featured ? 1 : 0
+      images: Array.isArray(images) ? images : [],
+      featured: featured ? 1 : 0,
+      is_unique: is_unique ? 1 : 0
     });
     res.json({ id, success: true });
   } catch (err) {
@@ -871,17 +956,20 @@ app.post('/api/admin/products', requireAuth, async (req, res) => {
 
 app.put('/api/admin/products/:id', requireAuth, async (req, res) => {
   console.log('PUT /api/admin/products/:id body:', JSON.stringify(req.body));
-  const { name, description, price, category, stock, image_url, featured } = req.body;
+  const { name, description, long_description, price, category, stock, image_url, images, featured, is_unique } = req.body;
   
   try {
     await updateProduct(parseInt(req.params.id), {
       name,
       description: description || '',
+      long_description: long_description || '',
       price: parseFloat(price),
       category: category || 'other',
       stock: parseInt(stock) || 0,
       image_url: image_url || '',
-      featured: featured ? 1 : 0
+      images: Array.isArray(images) ? images : [],
+      featured: featured ? 1 : 0,
+      is_unique: is_unique ? 1 : 0
     });
     res.json({ success: true });
   } catch (err) {

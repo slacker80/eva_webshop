@@ -41,6 +41,16 @@ function all(sql, params = []) {
   });
 }
 
+async function ensureColumns(table, columns) {
+  const existing = await all(`PRAGMA table_info(${table})`);
+  const existingNames = new Set(existing.map(col => col.name));
+  for (const col of columns) {
+    if (!existingNames.has(col.name)) {
+      await run(`ALTER TABLE ${table} ADD COLUMN ${col.name} ${col.definition}`);
+    }
+  }
+}
+
 // Initialize database
 function initDatabase() {
   return new Promise((resolve, reject) => {
@@ -120,6 +130,8 @@ function initDatabase() {
       db.get('SELECT 1', async (err) => {
         if (err) return fail(err);
         try {
+          await migrateProducts();
+          await migrateProductImages();
           await migrateHomepage();
           await initDefaultAdmin();
           await ensureCategories();
@@ -211,23 +223,87 @@ function migrateHomepage() {
 }
 
 // Product functions
-function getProducts() {
-  return new Promise((resolve, reject) => {
-    db.all('SELECT * FROM products ORDER BY featured DESC, created_at DESC', (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows || []);
-    });
-  });
+async function migrateProducts() {
+  await ensureColumns('products', [
+    { name: 'long_description', definition: "TEXT DEFAULT ''" },
+    { name: 'is_unique', definition: 'BOOLEAN DEFAULT 0' }
+  ]);
+}
+
+async function migrateProductImages() {
+  await run(`CREATE TABLE IF NOT EXISTS product_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    image_url TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+  )`);
+}
+
+function parseImages(images) {
+  if (Array.isArray(images)) return images;
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return images.split('\n');
+    }
+  }
+  return [];
+}
+
+async function getProductImages(productId) {
+  return all('SELECT * FROM product_images WHERE product_id=? ORDER BY sort_order ASC, id ASC', [productId]);
+}
+
+async function setProductImages(productId, images) {
+  const cleaned = parseImages(images)
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+
+  await run('BEGIN TRANSACTION');
+  try {
+    await run('DELETE FROM product_images WHERE product_id=?', [productId]);
+    for (let i = 0; i < cleaned.length; i++) {
+      await run(
+        'INSERT INTO product_images (product_id, image_url, sort_order) VALUES (?, ?, ?)',
+        [productId, cleaned[i], i]
+      );
+    }
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
+async function attachImages(product) {
+  if (!product) return product;
+  product.images = await getProductImages(product.id);
+  return product;
+}
+
+async function getProducts() {
+  const products = await all('SELECT * FROM products ORDER BY featured DESC, created_at DESC');
+  return Promise.all(products.map(attachImages));
+}
+
+async function getProduct(id) {
+  return attachImages(await get('SELECT * FROM products WHERE id=?', [id]));
 }
 
 function addProduct(data) {
   return new Promise((resolve, reject) => {
     db.run(
-      'INSERT INTO products (name, description, price, category, stock, image_url, featured) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [data.name, data.description, data.price, data.category, data.stock, data.image_url, data.featured ? 1 : 0],
+      'INSERT INTO products (name, description, long_description, price, category, stock, image_url, featured, is_unique) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [data.name, data.description, data.long_description || '', data.price, data.category, data.stock, data.image_url, data.featured ? 1 : 0, data.is_unique ? 1 : 0],
       function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
+        if (err) return reject(err);
+        const id = this.lastID;
+        if (!Object.prototype.hasOwnProperty.call(data, 'images')) return resolve(id);
+        setProductImages(id, data.images).then(() => resolve(id)).catch(reject);
       }
     );
   });
@@ -236,11 +312,12 @@ function addProduct(data) {
 function updateProduct(id, data) {
   return new Promise((resolve, reject) => {
     db.run(
-      'UPDATE products SET name=?, description=?, price=?, category=?, stock=?, image_url=?, featured=? WHERE id=?',
-      [data.name, data.description, data.price, data.category, data.stock, data.image_url, data.featured ? 1 : 0, id],
+      'UPDATE products SET name=?, description=?, long_description=?, price=?, category=?, stock=?, image_url=?, featured=?, is_unique=? WHERE id=?',
+      [data.name, data.description, data.long_description || '', data.price, data.category, data.stock, data.image_url, data.featured ? 1 : 0, data.is_unique ? 1 : 0, id],
       (err) => {
-        if (err) reject(err);
-        else resolve();
+        if (err) return reject(err);
+        if (!Object.prototype.hasOwnProperty.call(data, 'images')) return resolve();
+        setProductImages(id, data.images).then(resolve).catch(reject);
       }
     );
   });
@@ -248,11 +325,24 @@ function updateProduct(id, data) {
 
 function deleteProduct(id) {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM products WHERE id=?', [id], (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
+    run('DELETE FROM product_images WHERE product_id=?', [id])
+      .then(() => run('DELETE FROM products WHERE id=?', [id]))
+      .then(resolve)
+      .catch(reject);
   });
+}
+
+async function addProductImage(productId, imageUrl) {
+  const row = await get('SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM product_images WHERE product_id=?', [productId]);
+  const result = await run(
+    'INSERT INTO product_images (product_id, image_url, sort_order) VALUES (?, ?, ?)',
+    [productId, imageUrl, row?.next_order || 0]
+  );
+  return result.lastID;
+}
+
+async function deleteProductImage(productId, imageId) {
+  await run('DELETE FROM product_images WHERE product_id=? AND id=?', [productId, imageId]);
 }
 
 async function ensureCategories() {
@@ -487,9 +577,14 @@ module.exports = {
   db,
   initDatabase,
   getProducts,
+  getProduct,
   addProduct,
   updateProduct,
   deleteProduct,
+  getProductImages,
+  setProductImages,
+  addProductImage,
+  deleteProductImage,
   getCategories,
   addCategory,
   updateCategory,
