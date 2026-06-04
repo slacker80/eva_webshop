@@ -10,13 +10,13 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #f5f5f5;
             color: #333;
         }
-        
+
         header {
             background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
             color: white;
@@ -25,11 +25,11 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         header h1 {
             font-size: 1.5rem;
         }
-        
+
         .logout-btn {
             background: rgba(255,255,255,0.3);
             color: white;
@@ -38,20 +38,20 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 1rem;
         }
-        
+
         .tabs {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
             border-bottom: 2px solid #e0e0e0;
         }
-        
+
         .tab-btn {
             padding: 1rem;
             border: none;
@@ -63,20 +63,20 @@
             border-bottom: 3px solid transparent;
             transition: all 0.3s;
         }
-        
+
         .tab-btn.active {
             color: #7b1fa2;
             border-bottom-color: #7b1fa2;
         }
-        
+
         .tab-content {
             display: none;
         }
-        
+
         .tab-content.active {
             display: block;
         }
-        
+
         .btn {
             background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 100%);
             color: white;
@@ -87,16 +87,16 @@
             font-size: 1rem;
             font-weight: 600;
         }
-        
+
         .btn-secondary {
             background: #e0e0e0;
             color: #333;
         }
-        
+
         .btn-danger {
             background: #d32f2f;
         }
-        
+
         .product-form {
             background: white;
             padding: 1.5rem;
@@ -104,17 +104,17 @@
             margin-bottom: 2rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        
+
         .form-group {
             margin-bottom: 1rem;
         }
-        
+
         label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
         }
-        
+
         input, textarea, select {
             width: 100%;
             padding: 0.75rem;
@@ -123,40 +123,40 @@
             font-size: 1rem;
             font-family: inherit;
         }
-        
+
         textarea {
             resize: vertical;
             min-height: 100px;
         }
-        
+
         input:focus, textarea:focus, select:focus {
             outline: none;
             border-color: #7b1fa2;
             box-shadow: 0 0 0 3px rgba(123,31,162,0.1);
         }
-        
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-        
+
         .checkbox-group {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         input[type="checkbox"] {
             width: auto;
             cursor: pointer;
         }
-        
+
         .product-list {
             display: grid;
             gap: 1rem;
         }
-        
+
         .product-card {
             background: white;
             padding: 1.5rem;
@@ -168,53 +168,53 @@
             flex-wrap: wrap;
             gap: 1rem;
         }
-        
+
         .product-info {
             flex: 1;
             min-width: 200px;
         }
-        
+
         .product-info h3 {
             margin-bottom: 0.5rem;
             color: #7b1fa2;
         }
-        
+
         .product-price {
             font-size: 1.25rem;
             font-weight: 600;
             color: #d4af37;
             margin: 0.5rem 0;
         }
-        
+
         .product-actions {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
         }
-        
+
         .message {
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 1rem;
         }
-        
+
         .error {
             background: #ffebee;
             color: #d32f2f;
         }
-        
+
         .success {
             background: #e8f5e9;
             color: #388e3c;
         }
-        
+
         .homepage-form {
             background: white;
             padding: 1.5rem;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        
+
         .featured-products-list {
             background: white;
             padding: 1.5rem;
@@ -222,7 +222,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-top: 2rem;
         }
-        
+
         .featured-item {
             display: flex;
             align-items: center;
@@ -250,17 +250,66 @@
             color: #777;
             white-space: nowrap;
         }
-        
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .edit-modal {
+            background: white;
+            border-radius: 8px;
+            max-width: 560px;
+            width: min(100%, 560px);
+            max-height: calc(100vh - 2rem);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 18px 50px rgba(0,0,0,0.25);
+        }
+
+        .edit-modal-header {
+            padding: 1.5rem 1.5rem 0;
+        }
+
+        .edit-modal form {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .edit-modal-body {
+            padding: 1rem 1.5rem 0;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .edit-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding: 1rem 1.5rem 1.5rem;
+            border-top: 1px solid #eee;
+            background: white;
+            box-shadow: 0 -8px 16px rgba(255,255,255,0.9);
+        }
+
         @media (max-width: 600px) {
             .form-row {
                 grid-template-columns: 1fr;
             }
-            
+
             .product-card {
                 flex-direction: column;
                 align-items: flex-start;
             }
-            
+
             .product-actions {
                 width: 100%;
             }
@@ -268,11 +317,24 @@
             .category-card {
                 grid-template-columns: 1fr;
             }
-            
+
+            .modal-backdrop {
+                align-items: stretch;
+                padding: 0.5rem;
+            }
+
+            .edit-modal {
+                max-height: calc(100vh - 1rem);
+            }
+
+            .edit-modal-actions {
+                flex-direction: column-reverse;
+            }
+
             .btn {
                 width: 100%;
             }
-            
+
             header {
                 flex-direction: column;
                 gap: 1rem;
@@ -285,17 +347,17 @@
         <h1>💎 Admin Dashboard</h1>
         <button class="logout-btn" onclick="logout()">Logout</button>
     </header>
-    
+
     <div class="container">
         <div id="message"></div>
-        
+
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('products')">Products</button>
             <button class="tab-btn" onclick="switchTab('categories')">Categories</button>
             <button class="tab-btn" onclick="switchTab('homepage')">Homepage</button>
             <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
         </div>
-        
+
         <!-- PRODUCTS TAB -->
         <div id="products" class="tab-content active">
             <div class="product-form">
@@ -311,7 +373,7 @@
                             <input type="number" name="price" step="0.01" required>
                         </div>
                     </div>
-                    
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>Category</label>
@@ -324,28 +386,28 @@
                             <input type="number" name="stock" value="0">
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Description</label>
                         <textarea name="description"></textarea>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Image</label>
                         <input type="file" accept="image/*" onchange="uploadImage(this, 'image_url')" style="margin-bottom:0.5rem;">
                         <div id="img_preview_add" style="margin-bottom:0.5rem; display:none;"><img src="" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
                         <input type="text" name="image_url" id="image_url" placeholder="https://... or upload above">
                     </div>
-                    
+
                     <div class="form-group checkbox-group">
                         <input type="checkbox" name="featured" id="featured">
                         <label for="featured" style="margin: 0;">Featured on homepage</label>
                     </div>
-                    
+
                     <button type="submit" class="btn">Add Product</button>
                 </form>
             </div>
-            
+
             <div id="productList" class="product-list"></div>
         </div>
 
@@ -368,7 +430,7 @@
 
             <div id="categoryList" class="category-list"></div>
         </div>
-        
+
         <!-- HOMEPAGE TAB -->
         <div id="homepage" class="tab-content">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
@@ -385,36 +447,36 @@
                             <label>Hero Subtitle</label>
                             <textarea name="hero_subtitle" id="ef_hero_subtitle" rows="2"></textarea>
                         </div>
-                        
+
                         <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 1</h3>
                         <div class="form-row">
                             <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about1_icon" id="ef_about1_icon"></div>
                             <div class="form-group"><label>Title</label><input type="text" name="about1_title" id="ef_about1_title"></div>
                         </div>
                         <div class="form-group"><label>Text</label><textarea name="about1_text" id="ef_about1_text" rows="2"></textarea></div>
-                        
+
                         <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 2</h3>
                         <div class="form-row">
                             <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about2_icon" id="ef_about2_icon"></div>
                             <div class="form-group"><label>Title</label><input type="text" name="about2_title" id="ef_about2_title"></div>
                         </div>
                         <div class="form-group"><label>Text</label><textarea name="about2_text" id="ef_about2_text" rows="2"></textarea></div>
-                        
+
                         <h3 style="margin-top:1.5rem; color:#7b1fa2;">About Card 3</h3>
                         <div class="form-row">
                             <div class="form-group"><label>Icon (emoji)</label><input type="text" name="about3_icon" id="ef_about3_icon"></div>
                             <div class="form-group"><label>Title</label><input type="text" name="about3_title" id="ef_about3_title"></div>
                         </div>
                         <div class="form-group"><label>Text</label><textarea name="about3_text" id="ef_about3_text" rows="2"></textarea></div>
-                        
+
                         <h3 style="margin-top:1.5rem; color:#7b1fa2;">Featured Section</h3>
                         <div class="form-group"><label>Title</label><input type="text" name="featured_title" id="ef_featured_title"></div>
                         <div class="form-group"><label>Subtitle suffix (e.g. "handpicked pieces")</label><input type="text" name="featured_subtitle" id="ef_featured_subtitle"></div>
-                        
+
                         <button type="submit" class="btn" style="width:100%; margin-top:1rem;">💾 Save All</button>
                     </form>
                 </div>
-                
+
                 <!-- LIVE PREVIEW -->
                 <div>
                     <h2 style="margin-bottom:1rem;">Live Preview</h2>
@@ -448,14 +510,14 @@
                     <p style="margin-top:0.5rem; color:#999; font-size:0.8rem;">💡 Type in the form → preview updates live</p>
                 </div>
             </div>
-            
+
             <div class="featured-products-list" style="margin-top:2rem;">
                 <h2>Featured Products</h2>
                 <p style="color: #999; margin-bottom: 1rem;">Check products in the Products tab to feature them on your homepage</p>
                 <div id="featuredList"></div>
             </div>
         </div>
-        
+
         <!-- SETTINGS TAB -->
         <div id="settings" class="tab-content">
             <div class="product-form">
@@ -470,7 +532,7 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         let categories = [];
 
@@ -518,12 +580,12 @@
             const btn = document.querySelector(`[onclick*="switchTab('${tabName}')"]`);
             if (btn) btn.classList.add('active');
         }
-        
+
         // Logout
         function logout() {
             fetch('/admin/logout').then(() => window.location.href = '/admin/login');
         }
-        
+
         // Message display
         function showMessage(text, type = 'success') {
             const el = document.getElementById('message');
@@ -597,13 +659,13 @@
                 showMessage('Connection error', 'error');
             }
         }
-        
+
         // Load products
         async function loadProducts() {
             try {
                 const res = await fetch('/api/admin/products');
                 const products = await res.json();
-                
+
                 const html = products.map(p => `
                     <div class="product-card">
                         <div class="product-info">
@@ -619,32 +681,32 @@
                         </div>
                     </div>
                 `).join('');
-                
+
                 document.getElementById('productList').innerHTML = html;
             } catch (err) {
                 showMessage('Error loading products', 'error');
             }
         }
-        
+
         // Add product
         async function handleAddProduct(e) {
             e.preventDefault();
-            
+
             if (_isUploading) {
                 showMessage('⏳ Wait for upload to finish!', 'error');
                 return;
             }
-            
+
             const form = e.target;
             const data = new FormData(form);
-            
+
             try {
                 const res = await fetch('/api/admin/products', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(Object.fromEntries(data))
                 });
-                
+
                 if (res.ok) {
                     showMessage('Product added!', 'success');
                     form.reset();
@@ -657,11 +719,11 @@
                 showMessage('Connection error', 'error');
             }
         }
-        
+
         // Delete product
         async function deleteProduct(id) {
             if (!confirm('Delete this product?')) return;
-            
+
             try {
                 const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
                 if (res.ok) {
@@ -673,7 +735,7 @@
                 showMessage('Error deleting product', 'error');
             }
         }
-        
+
         // Edit product (opens modal form)
         function editProduct(id) {
             // Find product
@@ -684,103 +746,96 @@
                 })
                 .catch(err => showMessage('Error loading product', 'error'));
         }
-        
+
         // Show edit modal
         function showEditModal(product) {
             const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-            `;
-            
+            modal.className = 'modal-backdrop';
+
             modal.innerHTML = `
-                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
-                    <h2 style="margin-bottom: 1rem;">Edit Product</h2>
+                <div class="edit-modal">
+                    <div class="edit-modal-header">
+                        <h2>Edit Product</h2>
+                    </div>
                     <form id="editProductForm" onsubmit="handleEditProduct(event, ${product.id})">
-                        <div class="form-group">
-                            <label>Product Name *</label>
-                            <input type="text" name="name" value="${escapeHtml(product.name)}" required>
-                        </div>
-                        
-                        <div class="form-row">
+                        <div class="edit-modal-body">
                             <div class="form-group">
-                                <label>Price *</label>
-                                <input type="number" name="price" step="0.01" value="${product.price}" required>
+                                <label>Product Name *</label>
+                                <input type="text" name="name" value="${escapeHtml(product.name)}" required>
                             </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Price *</label>
+                                    <input type="number" name="price" step="0.01" value="${product.price}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Stock</label>
+                                    <input type="number" name="stock" value="${product.stock}">
+                                </div>
+                            </div>
+
                             <div class="form-group">
-                                <label>Stock</label>
-                                <input type="number" name="stock" value="${product.stock}">
+                                <label>Category</label>
+                                <select name="category" data-category-select>
+                                    ${categoryOptions(product.category)}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea name="description">${escapeHtml(product.description || '')}</textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Image</label>
+                                <input type="file" accept="image/*" onchange="uploadImage(this, 'edit_image_url')" style="margin-bottom:0.5rem;">
+                                <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${escapeHtml(product.image_url || '')}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
+                                <input type="text" name="image_url" id="edit_image_url" value="${escapeHtml(product.image_url || '')}">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" name="featured" id="editFeatured" ${product.featured ? 'checked' : ''}>
+                                <label for="editFeatured">Featured on homepage</label>
                             </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" data-category-select>
-                                ${categoryOptions(product.category)}
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Description</label>
-                            <textarea name="description">${escapeHtml(product.description || '')}</textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Image</label>
-                            <input type="file" accept="image/*" onchange="uploadImage(this, 'edit_image_url')" style="margin-bottom:0.5rem;">
-                            <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${escapeHtml(product.image_url || '')}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
-                            <input type="text" name="image_url" id="edit_image_url" value="${escapeHtml(product.image_url || '')}">
-                        </div>
-                        
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" name="featured" id="editFeatured" ${product.featured ? 'checked' : ''}>
-                            <label for="editFeatured">Featured on homepage</label>
-                        </div>
-                        
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+
+                        <div class="edit-modal-actions">
                             <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
                             <button type="submit" class="btn">Update Product</button>
                         </div>
                     </form>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
         }
-        
+
         // Close edit modal
         function closeEditModal() {
-            const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 1000"]');
+            const modal = document.querySelector('.modal-backdrop');
             if (modal) modal.remove();
         }
-        
+
         // Handle edit product
         async function handleEditProduct(e, productId) {
             e.preventDefault();
-            
+
             if (_isUploading) {
                 showMessage('⏳ Wait for upload to finish!', 'error');
                 return;
             }
-            
+
             const form = e.target;
             const data = Object.fromEntries(new FormData(form));
-            
+
             try {
                 const res = await fetch(`/api/admin/products/${productId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
+
                 if (res.ok) {
                     showMessage('Product updated!', 'success');
                     closeEditModal();
@@ -793,7 +848,7 @@
                 showMessage('Connection error', 'error');
             }
         }
-        
+
         // Homepage update
         async function handleHomepageUpdate(e) {
             e.preventDefault();
@@ -814,21 +869,21 @@
                 showMessage('Connection error', 'error');
             }
         }
-        
+
         let _isUploading = false;
-        
+
         // Image upload helper
         async function uploadImage(input, targetFieldId) {
             const file = input.files[0];
             if (!file) return;
-            
+
             // Disable submit buttons during upload
             _isUploading = true;
             document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = true);
-            
+
             const previewId = targetFieldId === 'image_url' ? 'img_preview_add' : 'img_preview_edit';
             const previewDiv = document.getElementById(previewId);
-            
+
             // Clear old status + set up status element
             let statusEl = null;
             if (previewDiv) {
@@ -841,13 +896,13 @@
                 statusEl.style.cssText = 'position:absolute;top:5px;left:5px;background:rgba(0,0,0,0.7);color:white;padding:2px 8px;border-radius:4px;font-size:12px;z-index:5;';
                 statusEl.textContent = '⬆ Uploading...';
                 previewDiv.appendChild(statusEl);
-                
+
                 // Local preview
                 const reader = new FileReader();
                 reader.onload = (e) => { previewDiv.querySelector('img').src = e.target.result; };
                 reader.readAsDataURL(file);
             }
-            
+
             const formData = new FormData();
             formData.append('image', file);
             try {
@@ -875,22 +930,22 @@
             try {
                 const res = await fetch('/api/admin/homepage');
                 const hp = await res.json();
-                
+
                 const fields = ['hero_title','hero_subtitle',
                     'about1_icon','about1_title','about1_text',
                     'about2_icon','about2_title','about2_text',
                     'about3_icon','about3_title','about3_text',
                     'featured_title','featured_subtitle'];
-                
+
                 // Fill form fields
                 for (const f of fields) {
                     const el = document.getElementById('ef_' + f);
                     if (el) el.value = hp[f] || '';
                 }
-                
+
                 // Update live preview
                 updatePreview(hp);
-                
+
                 // Live preview: bind input events
                 for (const f of fields) {
                     const el = document.getElementById('ef_' + f);
@@ -903,7 +958,7 @@
                 console.error('Error loading homepage', err);
             }
         }
-        
+
         function updatePreview(hp) {
             document.getElementById('pv_hero_title').textContent = hp.hero_title || '';
             document.getElementById('pv_hero_subtitle').textContent = hp.hero_subtitle || '';
@@ -918,13 +973,13 @@
             document.getElementById('pv_about3_text').textContent = hp.about3_text || '';
             document.getElementById('pv_featured_title').textContent = hp.featured_title || '';
             document.getElementById('pv_featured_subtitle').textContent = hp.featured_subtitle || 'items';
-            
+
             // Update featured count
             fetch('/api/products/featured').then(r => r.json()).then(p => {
                 document.getElementById('pv_featured_count').textContent = p.length;
             });
         }
-        
+
         // Password change
         async function handlePasswordChange(e) {
             e.preventDefault();
@@ -946,14 +1001,14 @@
                 showMessage('Connection error', 'error');
             }
         }
-        
+
         // Initialize
         // Ensure all fetch requests include credentials (session cookie)
         const _origFetch = window.fetch;
         window.fetch = function(url, options = {}) {
             return _origFetch(url, { ...options, credentials: 'include' });
         };
-        
+
         loadCategories().then(loadProducts);
         loadHomepageSettings();
     </script>

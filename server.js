@@ -121,7 +121,7 @@ function renderProductCard(product) {
 
   return `
                 <div class="product-card">
-                    ${imageUrl ? `<div class="product-image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy"></div>` : ''}
+                    ${imageUrl ? `<button type="button" class="product-image product-image-zoom-trigger" data-image-zoom="${escapeHtml(imageUrl)}" data-image-title="${escapeHtml(product.name)}" aria-label="Zoom ${escapeHtml(product.name)}"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy"></button>` : ''}
                     <div class="product-name">${escapeHtml(product.name)}</div>
                     <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
                     <div class="product-description">${escapeHtml(product.description)}</div>
@@ -337,7 +337,8 @@ async function renderPage(title, content, activeCat = '') {
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
         .product-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; }
         .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .product-image { width: 100%; height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f0f0f0; }
+        .product-image { display: block; width: 100%; height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 1rem; background: #f0f0f0; border: 0; padding: 0; }
+        .product-image-zoom-trigger { cursor: zoom-in; }
         .product-image img { width: 100%; height: 100%; object-fit: cover; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; }
         .product-category { display: inline-block; background: rgba(123, 31, 162, 0.1); color: #7b1fa2; padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
@@ -362,6 +363,11 @@ async function renderPage(title, content, activeCat = '') {
         .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
         .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
         .empty-cart { color: #718096; padding: 1rem 0; }
+        .image-zoom-modal { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.78); padding: 1rem; align-items: center; justify-content: center; }
+        .image-zoom-modal.open { display: flex; }
+        .image-zoom-panel { position: relative; max-width: min(92vw, 1100px); max-height: 92vh; }
+        .image-zoom-panel img { display: block; max-width: 100%; max-height: 92vh; object-fit: contain; border-radius: 8px; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+        .image-zoom-close { position: absolute; top: -0.75rem; right: -0.75rem; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 50%; background: white; color: #4a148c; font-size: 1.75rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
         
         footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
@@ -406,6 +412,13 @@ async function renderPage(title, content, activeCat = '') {
         </div>
     </div>
 
+    <div id="imageZoomModal" class="image-zoom-modal" aria-hidden="true">
+        <div class="image-zoom-panel" role="dialog" aria-modal="true" aria-label="Product image">
+            <button type="button" id="imageZoomClose" class="image-zoom-close" aria-label="Close image">&times;</button>
+            <img id="imageZoomImg" src="" alt="">
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             <p>© 2026 Crystal Jewelz. Handcrafted with love ✨</p>
@@ -417,6 +430,8 @@ async function renderPage(title, content, activeCat = '') {
         const cartCount = () => document.getElementById('cartCount');
         const cartItems = () => document.getElementById('cartItems');
         const cartTotal = () => document.getElementById('cartTotal');
+        const imageZoomModal = () => document.getElementById('imageZoomModal');
+        const imageZoomImg = () => document.getElementById('imageZoomImg');
 
         function escapeHtml(value) {
             return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -504,13 +519,34 @@ async function renderPage(title, content, activeCat = '') {
 
         function openCart() { cartModal().classList.add('open'); cartModal().setAttribute('aria-hidden', 'false'); }
         function closeCart() { cartModal().classList.remove('open'); cartModal().setAttribute('aria-hidden', 'true'); }
+        function openImageZoom(src, title) {
+            imageZoomImg().src = src;
+            imageZoomImg().alt = title || 'Product image';
+            imageZoomModal().classList.add('open');
+            imageZoomModal().setAttribute('aria-hidden', 'false');
+        }
+        function closeImageZoom() {
+            imageZoomModal().classList.remove('open');
+            imageZoomModal().setAttribute('aria-hidden', 'true');
+            imageZoomImg().src = '';
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             loadCart().catch(console.error);
             document.getElementById('cartButton').addEventListener('click', openCart);
             document.getElementById('cartClose').addEventListener('click', closeCart);
+            document.getElementById('imageZoomClose').addEventListener('click', closeImageZoom);
             cartModal().addEventListener('click', event => { if (event.target === cartModal()) closeCart(); });
+            imageZoomModal().addEventListener('click', event => { if (event.target === imageZoomModal()) closeImageZoom(); });
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    closeCart();
+                    closeImageZoom();
+                }
+            });
             document.addEventListener('click', event => {
+                const imageButton = event.target.closest('[data-image-zoom]');
+                if (imageButton) openImageZoom(imageButton.dataset.imageZoom, imageButton.dataset.imageTitle);
                 const addButton = event.target.closest('[data-add-to-cart]');
                 if (addButton) addToCart(addButton.dataset.addToCart, addButton).catch(console.error);
                 const updateButton = event.target.closest('[data-cart-update]');
