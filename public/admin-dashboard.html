@@ -229,6 +229,27 @@
             padding: 0.5rem;
             gap: 1rem;
         }
+
+        .category-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .category-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) auto auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .category-count {
+            color: #777;
+            white-space: nowrap;
+        }
         
         @media (max-width: 600px) {
             .form-row {
@@ -242,6 +263,10 @@
             
             .product-actions {
                 width: 100%;
+            }
+
+            .category-card {
+                grid-template-columns: 1fr;
             }
             
             .btn {
@@ -266,6 +291,7 @@
         
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('products')">Products</button>
+            <button class="tab-btn" onclick="switchTab('categories')">Categories</button>
             <button class="tab-btn" onclick="switchTab('homepage')">Homepage</button>
             <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
         </div>
@@ -289,12 +315,8 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Category</label>
-                            <select name="category">
+                            <select name="category" id="addCategorySelect" data-category-select>
                                 <option value="bracelets">Bracelets</option>
-                                <option value="necklaces">Necklaces</option>
-                                <option value="rings">Rings</option>
-                                <option value="anklets">Anklets</option>
-                                <option value="earrings">Earrings</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -325,6 +347,26 @@
             </div>
             
             <div id="productList" class="product-list"></div>
+        </div>
+
+        <!-- CATEGORIES TAB -->
+        <div id="categories" class="tab-content">
+            <div class="product-form">
+                <h2>Add New Category</h2>
+                <form id="categoryForm" onsubmit="handleAddCategory(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Category Name *</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="form-group" style="display:flex; align-items:flex-end;">
+                            <button type="submit" class="btn">Add Category</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="categoryList" class="category-list"></div>
         </div>
         
         <!-- HOMEPAGE TAB -->
@@ -430,6 +472,43 @@
     </div>
     
     <script>
+        let categories = [];
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        function categoryLabel(name) {
+            const normalized = String(name || '').trim();
+            if (!normalized) return 'Other';
+            if (/^[a-z0-9 -]+$/.test(normalized) && normalized === normalized.toLowerCase()) {
+                return normalized.replace(/\b\w/g, ch => ch.toUpperCase());
+            }
+            return normalized;
+        }
+
+        function categoryOptions(selectedValue = '') {
+            const source = categories.length ? categories : [{ name: 'bracelets' }];
+            return source.map(category => {
+                const value = category.name || '';
+                const selected = String(value).toLowerCase() === String(selectedValue || '').toLowerCase() ? ' selected' : '';
+                return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(categoryLabel(value))}</option>`;
+            }).join('');
+        }
+
+        function populateCategorySelects() {
+            document.querySelectorAll('[data-category-select]').forEach(select => {
+                const selectedValue = select.value;
+                select.innerHTML = categoryOptions(selectedValue);
+            });
+        }
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -452,6 +531,72 @@
             el.textContent = text;
             setTimeout(() => el.textContent = '', 3000);
         }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/api/admin/categories');
+                categories = await res.json();
+                renderCategories();
+                populateCategorySelects();
+            } catch (err) {
+                showMessage('Error loading categories', 'error');
+            }
+        }
+
+        function renderCategories() {
+            const html = categories.map(category => `
+                <div class="category-card">
+                    <input type="text" id="category_${category.id}" value="${escapeHtml(category.name)}">
+                    <span class="category-count">${Number(category.product_count || 0)} products</span>
+                    <button type="button" class="btn" onclick="renameCategory(${category.id})">Save</button>
+                </div>
+            `).join('');
+            document.getElementById('categoryList').innerHTML = html || '<p>No categories yet.</p>';
+        }
+
+        async function handleAddCategory(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            try {
+                const res = await fetch('/api/admin/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showMessage('Category added!', 'success');
+                    form.reset();
+                    await loadCategories();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showMessage(body.error || 'Error adding category', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+
+        async function renameCategory(id) {
+            const input = document.getElementById(`category_${id}`);
+            try {
+                const res = await fetch(`/api/admin/categories/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: input.value })
+                });
+                if (res.ok) {
+                    showMessage('Category saved!', 'success');
+                    await loadCategories();
+                    await loadProducts();
+                } else {
+                    const body = await res.json().catch(() => ({}));
+                    showMessage(body.error || 'Error saving category', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
         
         // Load products
         async function loadProducts() {
@@ -462,10 +607,10 @@
                 const html = products.map(p => `
                     <div class="product-card">
                         <div class="product-info">
-                            <h3>${p.name}</h3>
-                            <p>${p.description || 'No description'}</p>
-                            <p style="font-size: 0.9rem; color: #999;">${p.category} • Stock: ${p.stock}</p>
-                            <div class="product-price">$${p.price}</div>
+                            <h3>${escapeHtml(p.name)}</h3>
+                            <p>${escapeHtml(p.description || 'No description')}</p>
+                            <p style="font-size: 0.9rem; color: #999;">${escapeHtml(categoryLabel(p.category))} • Stock: ${Number(p.stock || 0)}</p>
+                            <div class="product-price">$${Number(p.price || 0).toFixed(2)}</div>
                             ${p.featured ? '<span style="background: #ffd700; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">Featured</span>' : ''}
                         </div>
                         <div class="product-actions">
@@ -504,6 +649,7 @@
                     showMessage('Product added!', 'success');
                     form.reset();
                     loadProducts();
+                    loadCategories();
                 } else {
                     showMessage('Error adding product', 'error');
                 }
@@ -521,6 +667,7 @@
                 if (res.ok) {
                     showMessage('Product deleted!', 'success');
                     loadProducts();
+                    loadCategories();
                 }
             } catch (err) {
                 showMessage('Error deleting product', 'error');
@@ -560,7 +707,7 @@
                     <form id="editProductForm" onsubmit="handleEditProduct(event, ${product.id})">
                         <div class="form-group">
                             <label>Product Name *</label>
-                            <input type="text" name="name" value="${product.name}" required>
+                            <input type="text" name="name" value="${escapeHtml(product.name)}" required>
                         </div>
                         
                         <div class="form-row">
@@ -576,26 +723,21 @@
                         
                         <div class="form-group">
                             <label>Category</label>
-                            <select name="category">
-                                <option value="bracelets" ${product.category === 'bracelets' ? 'selected' : ''}>Bracelets</option>
-                                <option value="necklaces" ${product.category === 'necklaces' ? 'selected' : ''}>Necklaces</option>
-                                <option value="rings" ${product.category === 'rings' ? 'selected' : ''}>Rings</option>
-                                <option value="anklets" ${product.category === 'anklets' ? 'selected' : ''}>Anklets</option>
-                                <option value="earrings" ${product.category === 'earrings' ? 'selected' : ''}>Earrings</option>
-                                <option value="other" ${product.category === 'other' ? 'selected' : ''}>Other</option>
+                            <select name="category" data-category-select>
+                                ${categoryOptions(product.category)}
                             </select>
                         </div>
                         
                         <div class="form-group">
                             <label>Description</label>
-                            <textarea name="description">${product.description || ''}</textarea>
+                            <textarea name="description">${escapeHtml(product.description || '')}</textarea>
                         </div>
                         
                         <div class="form-group">
                             <label>Image</label>
                             <input type="file" accept="image/*" onchange="uploadImage(this, 'edit_image_url')" style="margin-bottom:0.5rem;">
-                            <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${product.image_url || ''}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
-                            <input type="text" name="image_url" id="edit_image_url" value="${product.image_url || ''}">
+                            <div id="img_preview_edit" style="margin-bottom:0.5rem;${product.image_url ? '' : 'display:none;'}"><img src="${escapeHtml(product.image_url || '')}" style="max-width:200px; max-height:150px; border-radius:8px; border:2px solid #e0e0e0;"></div>
+                            <input type="text" name="image_url" id="edit_image_url" value="${escapeHtml(product.image_url || '')}">
                         </div>
                         
                         <div class="form-group checkbox-group">
@@ -643,6 +785,7 @@
                     showMessage('Product updated!', 'success');
                     closeEditModal();
                     loadProducts();
+                    loadCategories();
                 } else {
                     showMessage('Error updating product', 'error');
                 }
@@ -811,7 +954,7 @@
             return _origFetch(url, { ...options, credentials: 'include' });
         };
         
-        loadProducts();
+        loadCategories().then(loadProducts);
         loadHomepageSettings();
     </script>
 </body>

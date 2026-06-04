@@ -9,7 +9,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
-const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
+const { initDatabase, getProducts, addProduct, updateProduct, deleteProduct, getCategories, addCategory, updateCategory, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
 const { sendManualOrderEmail } = require('./backend/email');
 
 const app = express();
@@ -62,61 +62,121 @@ app.use(session({
 const csrfProtection = csrf({ cookie: true });
 // CSRF applied per-route on admin APIs only
 
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function categoryLabel(name) {
+  const normalized = String(name || '').trim();
+  if (!normalized) return 'Other';
+  if (/^[a-z0-9 -]+$/.test(normalized) && normalized === normalized.toLowerCase()) {
+    return normalized.replace(/\b\w/g, ch => ch.toUpperCase());
+  }
+  return normalized;
+}
+
+function categorySlug(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'category';
+}
+
+const RESERVED_CATEGORY_SLUGS = new Set([
+  'admin',
+  'api',
+  'health',
+  'pay',
+  'products',
+  'uploads',
+  'checkout-html',
+  'payment-result-html',
+  'admin-login-html',
+  'admin-dashboard-html',
+  'favicon-ico'
+]);
+
+function categoryPath(name) {
+  return `/${categorySlug(name)}`;
+}
+
+function productMatchesCategory(product, categoryName) {
+  return categorySlug(product.category) === categorySlug(categoryName);
+}
+
+function renderProductCard(product) {
+  const stock = Number(product.stock || 0);
+  const imageUrl = String(product.image_url || '').trim();
+  const addButton = stock > 0
+    ? `<button type="button" class="add-btn" data-add-to-cart="${product.id}">Add to Cart</button>`
+    : '<button type="button" class="add-btn" disabled>Out of stock</button>';
+
+  return `
+                <div class="product-card">
+                    ${imageUrl ? `<div class="product-image"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy"></div>` : ''}
+                    <div class="product-name">${escapeHtml(product.name)}</div>
+                    <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
+                    <div class="product-description">${escapeHtml(product.description)}</div>
+                    <div class="product-footer">
+                        <div class="product-price">$${Number(product.price || 0).toFixed(2)}</div>
+                        ${addButton}
+                    </div>
+                </div>`;
+}
+
 // Homepage — shows featured products only
 app.get('/', async (req, res) => {
   try {
     const [products, hp] = await Promise.all([getProducts(), getHomepage()]);
     const featured = products.filter(p => p.featured === 1);
     
-    const productCards = featured.map(p => `
-                <div class="product-card">
-                    ${p.image_url ? `<div class="product-image"><img src="${p.image_url}" alt="${p.name}" loading="lazy"></div>` : ''}
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-category">${p.category}</div>
-                    <div class="product-description">${p.description}</div>
-                    <div class="product-footer">
-                        <div class="product-price">$${p.price}</div>
-                        <button type="button" class="add-btn" data-add-to-cart="${p.id}">Add to Cart</button>
-                    </div>
-                </div>`).join('');
+    const productCards = featured.map(renderProductCard).join('');
 
     const content = `
             <div class="hero">
-                <h1>${hp.hero_title}</h1>
-                <p>${hp.hero_subtitle}</p>
+                <h1>${escapeHtml(hp.hero_title)}</h1>
+                <p>${escapeHtml(hp.hero_subtitle)}</p>
             </div>
 
             <div class="about-section">
                 <div class="about-card">
-                    <div class="icon">${hp.about1_icon}</div>
-                    <h3>${hp.about1_title}</h3>
-                    <p>${hp.about1_text}</p>
+                    <div class="icon">${escapeHtml(hp.about1_icon)}</div>
+                    <h3>${escapeHtml(hp.about1_title)}</h3>
+                    <p>${escapeHtml(hp.about1_text)}</p>
                 </div>
                 <div class="about-card">
-                    <div class="icon">${hp.about2_icon}</div>
-                    <h3>${hp.about2_title}</h3>
-                    <p>${hp.about2_text}</p>
+                    <div class="icon">${escapeHtml(hp.about2_icon)}</div>
+                    <h3>${escapeHtml(hp.about2_title)}</h3>
+                    <p>${escapeHtml(hp.about2_text)}</p>
                 </div>
                 <div class="about-card">
-                    <div class="icon">${hp.about3_icon}</div>
-                    <h3>${hp.about3_title}</h3>
-                    <p>${hp.about3_text}</p>
+                    <div class="icon">${escapeHtml(hp.about3_icon)}</div>
+                    <h3>${escapeHtml(hp.about3_title)}</h3>
+                    <p>${escapeHtml(hp.about3_text)}</p>
                 </div>
             </div>
 
             <div class="category-header">
-                <h1>${hp.featured_title}</h1>
-                <p class="category-count">${featured.length} ${hp.featured_subtitle}</p>
+                <h1>${escapeHtml(hp.featured_title)}</h1>
+                <p class="category-count">${featured.length} ${escapeHtml(hp.featured_subtitle)}</p>
             </div>
 
             <div class="products-grid">
-                ${productCards || '<p>No featured products yet. Check our <a href="/bracelets">categories</a>!</p>'}
+                ${productCards || '<p>No featured products yet. Check <a href="/products">all products</a>.</p>'}
             </div>`;
 
-    res.send(renderPage('Handcrafted Crystal Jewelry', content, '/'));
+    res.send(await renderPage('Handcrafted Crystal Jewelry', content, '/'));
   } catch (err) {
     console.error('Homepage error:', err);
-    res.status(500).send(renderPage('Error', '<p>Something went wrong.</p>'));
+    res.status(500).send(await renderPage('Error', '<p>Something went wrong.</p>'));
   }
 });
 
@@ -217,24 +277,39 @@ app.get('/api/products/:id', async (req, res) => {
 app.get('/api/products/category/:category', async (req, res) => {
   try {
     const products = await getProducts();
-    const categoryProducts = products.filter(p => p.category === req.params.category);
+    const categoryProducts = products.filter(p => productMatchesCategory(p, req.params.category));
     res.json(categoryProducts);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
 
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categories = await getCategories();
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
 // Shared HTML layout helper
-function renderPage(title, content, activeCat = '') {
-  const cats = ['All Products', 'Bracelets', 'Necklaces', 'Rings', 'Earrings'];
-  const slugs = ['/', '/bracelets', '/necklaces', '/rings', '/earrings'];
+async function renderPage(title, content, activeCat = '') {
+  const categories = await getCategories();
+  const navItems = [
+    { label: 'All Products', href: '/products' },
+    ...categories.map(category => ({
+      label: categoryLabel(category.name),
+      href: categoryPath(category.name)
+    }))
+  ];
   
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crystal Jewelz - ${title}</title>
+    <title>Crystal Jewelz - ${escapeHtml(title)}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: #f8f9fa; }
@@ -271,6 +346,7 @@ function renderPage(title, content, activeCat = '') {
         .product-price { font-size: 1.4rem; font-weight: bold; color: #d4af37; }
         .add-btn { background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; font-weight: 600; transition: opacity 0.3s; }
         .add-btn:hover { opacity: 0.9; }
+        .add-btn:disabled { background: #cbd5e0; cursor: not-allowed; opacity: 1; }
         .add-btn.added { background: #2f855a; }
         .cart-button { margin-left: 0.75rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.55); padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; font-weight: 600; }
         .cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; margin-left: 0.4rem; border-radius: 999px; background: #d4af37; color: #2d1742; font-size: 0.85rem; }
@@ -282,6 +358,7 @@ function renderPage(title, content, activeCat = '') {
         .cart-item { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid #eee; }
         .cart-actions { display: flex; align-items: center; gap: 0.5rem; }
         .cart-actions button { border: 0; background: #7b1fa2; color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
+        .cart-actions button:disabled { background: #cbd5e0; cursor: not-allowed; }
         .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
         .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
         .empty-cart { color: #718096; padding: 1rem 0; }
@@ -312,7 +389,7 @@ function renderPage(title, content, activeCat = '') {
     <main>
         <div class="container">
             <nav class="category-nav">
-                ${cats.map((c, i) => `<a href="${slugs[i]}" class="filter-btn${activeCat === slugs[i] ? ' active' : ''}">${c}</a>`).join('\n                ')}
+                ${navItems.map(item => `<a href="${escapeHtml(item.href)}" class="filter-btn${activeCat === item.href ? ' active' : ''}">${escapeHtml(item.label)}</a>`).join('\n                ')}
             </nav>
             ${content}
         </div>
@@ -363,12 +440,14 @@ function renderPage(title, content, activeCat = '') {
                 const productId = itemProductId(item);
                 const price = Number(item.price || 0);
                 const quantity = Number(item.quantity || 0);
+                const stock = Number(item.stock || 0);
+                const plusDisabled = stock > 0 && quantity >= stock ? ' disabled title="Niet meer op voorraad"' : '';
                 return '<div class="cart-item">' +
                     '<div><strong>' + escapeHtml(item.name) + '</strong><br><span>$' + price.toFixed(2) + ' each</span></div>' +
                     '<div class="cart-actions">' +
                         '<button type="button" data-cart-update="' + productId + '" data-change="-1">-</button>' +
                         '<span>' + quantity + '</span>' +
-                        '<button type="button" data-cart-update="' + productId + '" data-change="1">+</button>' +
+                        '<button type="button" data-cart-update="' + productId + '" data-change="1"' + plusDisabled + '>+</button>' +
                         '<button type="button" data-cart-remove="' + productId + '" aria-label="Remove item">&times;</button>' +
                     '</div>' +
                 '</div>';
@@ -445,41 +524,54 @@ function renderPage(title, content, activeCat = '') {
 </html>`;
 }
 
-// Category pages (server-side rendered)
-const CATEGORIES = ['bracelets', 'necklaces', 'rings', 'earrings', 'anklets'];
-CATEGORIES.forEach(cat => {
-  app.get(`/${cat}`, async (req, res) => {
-    try {
-      const products = await getProducts();
-      const categoryProducts = products.filter(p => p.category.toLowerCase() === cat.toLowerCase());
-      const catTitle = cat.charAt(0).toUpperCase() + cat.slice(1);
-      
-      const productCards = categoryProducts.map(p => `
-                <div class="product-card">
-                    ${p.image_url ? `<div class="product-image"><img src="${p.image_url}" alt="${p.name}" loading="lazy"></div>` : ''}
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-category">${p.category}</div>
-                    <div class="product-description">${p.description}</div>
-                    <div class="product-footer">
-                        <div class="product-price">$${p.price}</div>
-                        <button type="button" class="add-btn" data-add-to-cart="${p.id}">Add to Cart</button>
-                    </div>
-                </div>`).join('');
-      
-      const content = `
+app.get('/products', async (req, res) => {
+  try {
+    const products = await getProducts();
+    const productCards = products.map(renderProductCard).join('');
+    const content = `
             <div class="category-header">
-                <h1>✨ ${catTitle}</h1>
+                <h1>All Products</h1>
+                <p class="category-count">${products.length} products</p>
+            </div>
+            <div class="products-grid">
+                ${productCards || '<p>No products yet.</p>'}
+            </div>`;
+
+    res.send(await renderPage('All Products', content, '/products'));
+  } catch (err) {
+    console.error('All products page error:', err);
+    res.status(500).send(await renderPage('Error', '<p>Failed to load products.</p>'));
+  }
+});
+
+// Category pages (server-side rendered)
+app.get('/:categorySlug', async (req, res, next) => {
+  const requestedSlug = categorySlug(req.params.categorySlug);
+  if (RESERVED_CATEGORY_SLUGS.has(requestedSlug)) return next();
+
+  try {
+    const categories = await getCategories();
+    const category = categories.find(item => categorySlug(item.name) === requestedSlug);
+    if (!category) return next();
+
+    const products = await getProducts();
+    const categoryProducts = products.filter(product => productMatchesCategory(product, category.name));
+    const catTitle = categoryLabel(category.name);
+    const productCards = categoryProducts.map(renderProductCard).join('');
+    const content = `
+            <div class="category-header">
+                <h1>${escapeHtml(catTitle)}</h1>
                 <p class="category-count">${categoryProducts.length} products</p>
             </div>
             <div class="products-grid">
                 ${productCards || '<p>No products in this category yet.</p>'}
             </div>`;
-      
-      res.send(renderPage(catTitle, content, `/${cat}`));
-    } catch (err) {
-      res.status(500).send(renderPage('Error', '<p>Failed to load products.</p>'));
-    }
-  });
+
+    res.send(await renderPage(catTitle, content, categoryPath(category.name)));
+  } catch (err) {
+    console.error('Category page error:', err);
+    res.status(500).send(await renderPage('Error', '<p>Failed to load products.</p>'));
+  }
 });
 
 app.get('/api/homepage', async (req, res) => {
@@ -587,18 +679,23 @@ app.post('/api/cart', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
     const sessionId = cartSessionId(req);
-    if (!productId || !quantity) {
+    const parsedProductId = parseInt(productId, 10);
+    const addQuantity = parseInt(quantity, 10);
+    if (!Number.isInteger(parsedProductId) || !Number.isInteger(addQuantity) || addQuantity <= 0) {
       return res.status(400).json({ error: 'productId and quantity required' });
     }
     const products = await getProducts();
-    const product = products.find(p => p.id === parseInt(productId));
+    const product = products.find(p => p.id === parsedProductId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    if (product.stock < quantity) {
+    const currentCart = await getCart(sessionId);
+    const currentItem = currentCart.find(item => Number(item.productId || item.product_id) === parsedProductId);
+    const nextQuantity = Number(currentItem?.quantity || 0) + addQuantity;
+    if (Number(product.stock || 0) < nextQuantity) {
       return res.status(400).json({ error: 'Insufficient stock' });
     }
-    await addToCart(sessionId, parseInt(productId), parseInt(quantity));
+    await addToCart(sessionId, parsedProductId, addQuantity);
     const updatedCart = await getCart(sessionId);
     res.json(updatedCart);
   } catch (err) {
@@ -612,10 +709,22 @@ app.put('/api/cart/:productId', async (req, res) => {
     const { quantity } = req.body;
     const { productId } = req.params;
     const sessionId = cartSessionId(req);
-    if (quantity === undefined) {
+    const parsedProductId = parseInt(productId, 10);
+    const nextQuantity = parseInt(quantity, 10);
+    if (!Number.isInteger(parsedProductId) || !Number.isInteger(nextQuantity)) {
       return res.status(400).json({ error: 'quantity required' });
     }
-    await updateCartQuantity(sessionId, parseInt(productId), parseInt(quantity));
+    if (nextQuantity > 0) {
+      const products = await getProducts();
+      const product = products.find(p => p.id === parsedProductId);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      if (Number(product.stock || 0) < nextQuantity) {
+        return res.status(400).json({ error: 'Insufficient stock' });
+      }
+    }
+    await updateCartQuantity(sessionId, parsedProductId, nextQuantity);
     const updatedCart = await getCart(sessionId);
     res.json(updatedCart);
   } catch (err) {
@@ -753,6 +862,52 @@ app.delete('/api/admin/products/:id', requireAuth, async (req, res) => {
   }
 });
 
+function categoryApiError(res, err) {
+  if (err.code === 'CATEGORY_REQUIRED') {
+    return res.status(400).json({ error: 'Category name is required' });
+  }
+  if (err.code === 'CATEGORY_EXISTS') {
+    return res.status(409).json({ error: 'Category already exists' });
+  }
+  if (err.code === 'CATEGORY_NOT_FOUND') {
+    return res.status(404).json({ error: 'Category not found' });
+  }
+  return res.status(500).json({ error: 'Failed to save category' });
+}
+
+app.get('/api/admin/categories', requireAuth, async (req, res) => {
+  try {
+    const categories = await getCategories();
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+app.post('/api/admin/categories', requireAuth, async (req, res) => {
+  try {
+    if (RESERVED_CATEGORY_SLUGS.has(categorySlug(req.body.name))) {
+      return res.status(400).json({ error: 'This category name is reserved' });
+    }
+    const id = await addCategory(req.body.name);
+    res.status(201).json({ id, success: true });
+  } catch (err) {
+    categoryApiError(res, err);
+  }
+});
+
+app.put('/api/admin/categories/:id', requireAuth, async (req, res) => {
+  try {
+    if (RESERVED_CATEGORY_SLUGS.has(categorySlug(req.body.name))) {
+      return res.status(400).json({ error: 'This category name is reserved' });
+    }
+    await updateCategory(parseInt(req.params.id, 10), req.body.name);
+    res.json({ success: true });
+  } catch (err) {
+    categoryApiError(res, err);
+  }
+});
+
 // Image upload endpoint
 app.post('/api/admin/upload', requireAuth, upload.single('image'), (req, res) => {
   if (!req.file) {
@@ -805,7 +960,7 @@ app.put('/api/admin/password', requireAuth, async (req, res) => {
 // ==== FALLBACK ====
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.redirect('/products');
 });
 
 // Start server

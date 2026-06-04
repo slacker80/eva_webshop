@@ -8,9 +8,50 @@ fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = process.env.DATABASE_PATH || path.join(dataDir, 'database.db');
 const db = new sqlite3.Database(dbPath);
 
+const DEFAULT_CATEGORIES = ['bracelets', 'necklaces', 'rings', 'earrings', 'anklets'];
+
+function normalizeCategoryName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ');
+}
+
+function run(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) reject(err);
+      else resolve(this);
+    });
+  });
+}
+
+function get(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row);
+    });
+  });
+}
+
+function all(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
+  });
+}
+
 // Initialize database
 function initDatabase() {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const fail = (err) => {
+      if (!settled) {
+        settled = true;
+        reject(err);
+      }
+    };
+
     db.serialize(() => {
       // Products table
       db.run(`CREATE TABLE IF NOT EXISTS products (
@@ -24,7 +65,7 @@ function initDatabase() {
         featured BOOLEAN DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`, (err) => {
-        if (err) reject(err);
+        if (err) fail(err);
       });
 
       // Categories table
@@ -32,7 +73,7 @@ function initDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL
       )`, (err) => {
-        if (err) reject(err);
+        if (err) fail(err);
       });
 
       // Homepage settings table
@@ -52,8 +93,7 @@ function initDatabase() {
         featured_title TEXT DEFAULT '🌟 Featured Products',
         featured_subtitle TEXT DEFAULT 'handpicked pieces'
       )`, (err) => {
-        if (err) reject(err);
-        else migrateHomepage().then(resolve).catch(reject);
+        if (err) fail(err);
       });
 
       // Cart table (session-based)
@@ -65,7 +105,7 @@ function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (product_id) REFERENCES products(id)
       )`, (err) => {
-        if (err) reject(err);
+        if (err) fail(err);
       });
 
       // Admin users table
@@ -74,11 +114,21 @@ function initDatabase() {
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL
       )`, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          // Initialize default admin if not exists
-          initDefaultAdmin().then(resolve).catch(reject);
+        if (err) fail(err);
+      });
+
+      db.get('SELECT 1', async (err) => {
+        if (err) return fail(err);
+        try {
+          await migrateHomepage();
+          await initDefaultAdmin();
+          await ensureCategories();
+          if (!settled) {
+            settled = true;
+            resolve();
+          }
+        } catch (err) {
+          fail(err);
         }
       });
     });
@@ -205,6 +255,91 @@ function deleteProduct(id) {
   });
 }
 
+async function ensureCategories() {
+  const rows = await all('SELECT id, name FROM categories ORDER BY name');
+  const known = new Set(rows.map(row => normalizeCategoryName(row.name).toLowerCase()));
+  const productRows = await all(`
+    SELECT DISTINCT category
+    FROM products
+    WHERE category IS NOT NULL AND TRIM(category) != ''
+    ORDER BY LOWER(category)
+  `);
+  const names = rows.length === 0
+    ? [...productRows.map(row => row.category), ...DEFAULT_CATEGORIES]
+    : productRows.map(row => row.category);
+
+  for (const rawName of names) {
+    const name = normalizeCategoryName(rawName);
+    const key = name.toLowerCase();
+    if (!name || known.has(key)) continue;
+    await run('INSERT INTO categories (name) VALUES (?)', [name]);
+    known.add(key);
+  }
+}
+
+async function getCategories() {
+  await ensureCategories();
+  return all(`
+    SELECT c.id, c.name, COUNT(p.id) AS product_count
+    FROM categories c
+    LEFT JOIN products p ON LOWER(p.category) = LOWER(c.name)
+    GROUP BY c.id, c.name
+    ORDER BY LOWER(c.name)
+  `);
+}
+
+async function assertUniqueCategoryName(name, ignoreId = null) {
+  const rows = await all('SELECT id, name FROM categories');
+  const key = normalizeCategoryName(name).toLowerCase();
+  if (rows.some(row => row.id !== ignoreId && normalizeCategoryName(row.name).toLowerCase() === key)) {
+    const err = new Error('Category already exists');
+    err.code = 'CATEGORY_EXISTS';
+    throw err;
+  }
+}
+
+async function addCategory(name) {
+  const normalized = normalizeCategoryName(name);
+  if (!normalized) {
+    const err = new Error('Category name is required');
+    err.code = 'CATEGORY_REQUIRED';
+    throw err;
+  }
+
+  await ensureCategories();
+  await assertUniqueCategoryName(normalized);
+  const result = await run('INSERT INTO categories (name) VALUES (?)', [normalized]);
+  return result.lastID;
+}
+
+async function updateCategory(id, name) {
+  const normalized = normalizeCategoryName(name);
+  if (!normalized) {
+    const err = new Error('Category name is required');
+    err.code = 'CATEGORY_REQUIRED';
+    throw err;
+  }
+
+  await ensureCategories();
+  const category = await get('SELECT id, name FROM categories WHERE id = ?', [id]);
+  if (!category) {
+    const err = new Error('Category not found');
+    err.code = 'CATEGORY_NOT_FOUND';
+    throw err;
+  }
+
+  await assertUniqueCategoryName(normalized, Number(id));
+  await run('BEGIN TRANSACTION');
+  try {
+    await run('UPDATE categories SET name = ? WHERE id = ?', [normalized, id]);
+    await run('UPDATE products SET category = ? WHERE LOWER(category) = LOWER(?)', [normalized, category.name]);
+    await run('COMMIT');
+  } catch (err) {
+    await run('ROLLBACK').catch(() => {});
+    throw err;
+  }
+}
+
 // Homepage functions
 function getHomepage() {
   return new Promise((resolve, reject) => {
@@ -275,7 +410,7 @@ function updateAdminPassword(username, newPassword) {
 function getCart(sessionId) {
   return new Promise((resolve, reject) => {
     db.all(
-      `SELECT c.id, c.product_id, c.quantity, p.name, p.price, p.stock FROM cart_items c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? ORDER BY c.created_at DESC`,
+      `SELECT c.id AS cartItemId, c.product_id, c.product_id AS productId, c.quantity, p.name, p.price, p.stock FROM cart_items c JOIN products p ON c.product_id = p.id WHERE c.session_id = ? ORDER BY c.created_at DESC`,
       [sessionId],
       (err, rows) => {
         if (err) reject(err);
@@ -355,6 +490,9 @@ module.exports = {
   addProduct,
   updateProduct,
   deleteProduct,
+  getCategories,
+  addCategory,
+  updateCategory,
   getHomepage,
   updateHomepage,
   checkAdminLogin,

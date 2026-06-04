@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-IMAGE_NAME="${IMAGE_NAME:-crystaljewelz/eva-webshop}"
+IMAGE_NAME="${IMAGE_NAME:-ghcr.io/slacker80/eva_webshop}"
 IMAGE_TAG="${1:-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD 2>/dev/null || echo local)}"
 export IMAGE_NAME IMAGE_TAG
 

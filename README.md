@@ -13,7 +13,7 @@ Small Express/SQLite webshop for Crystal Jewelz.
 
 ## Important Files
 
-- `server.js` - Express app, product pages, cart API, admin routes, Stripe routes
+- `server.js` - Express app, product pages, cart API, admin routes, manual order routes
 - `db-utils.js` - SQLite setup and data access
 - `public/` - admin, checkout, payment result and legacy index pages
 - `Dockerfile` - production image build
@@ -67,8 +67,8 @@ SMTP_FROM=Crystal Jewelz <your-email@gmail.com>
 The image is intended to be tagged per deploy, for example:
 
 ```bash
-docker build -t ghcr.io/slacker80/eva-webshop:20260526-1925 .
-docker push ghcr.io/slacker80/eva-webshop:20260526-1925
+docker build -t ghcr.io/slacker80/eva_webshop:20260526-1925 .
+docker push ghcr.io/slacker80/eva_webshop:20260526-1925
 ```
 
 

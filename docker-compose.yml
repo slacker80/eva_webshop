@@ -1,6 +1,6 @@
 services:
   eva-webshop:
-    image: ${IMAGE_NAME:-crystaljewelz/eva-webshop}:${IMAGE_TAG:-local}
+    image: ${IMAGE_NAME:-ghcr.io/slacker80/eva_webshop}:${IMAGE_TAG:-local}
     build:
       context: .
     env_file:
