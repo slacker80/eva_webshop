@@ -268,6 +268,26 @@
             line-height: 1;
         }
 
+        .logo-preview {
+            margin-top: 0.75rem;
+            min-height: 92px;
+            border: 1px dashed #c9c2cf;
+            border-radius: 8px;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: #777;
+        }
+
+        .logo-preview img {
+            max-width: 240px;
+            max-height: 82px;
+            object-fit: contain;
+            display: block;
+        }
+
         .category-list {
             display: grid;
             gap: 1rem;
@@ -393,6 +413,7 @@
             <button class="tab-btn active" onclick="switchTab('products')">Products</button>
             <button class="tab-btn" onclick="switchTab('categories')">Categories</button>
             <button class="tab-btn" onclick="switchTab('homepage')">Homepage</button>
+            <button class="tab-btn" onclick="switchTab('appearance')">Appearance</button>
             <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
         </div>
 
@@ -570,6 +591,53 @@
                 <h2>Featured Products</h2>
                 <p style="color: #999; margin-bottom: 1rem;">Check products in the Products tab to feature them on your homepage</p>
                 <div id="featuredList"></div>
+            </div>
+        </div>
+
+        <!-- APPEARANCE TAB -->
+        <div id="appearance" class="tab-content">
+            <div class="product-form">
+                <h2>Logo & Style</h2>
+                <form id="appearanceForm" onsubmit="handleSiteSettingsUpdate(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Brand Name</label>
+                            <input type="text" name="brand_name" id="brand_name">
+                        </div>
+                        <div class="form-group">
+                            <label>Font Family</label>
+                            <select name="font_family" id="font_family">
+                                <option value="-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif">System Sans</option>
+                                <option value="Georgia, serif">Georgia Serif</option>
+                                <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo</label>
+                        <input type="file" accept="image/*" onchange="uploadSiteLogo(this)" style="margin-bottom:0.5rem;">
+                        <input type="text" name="logo_url" id="logo_url" placeholder="/uploads/logo.jpg" oninput="updateLogoPreview()">
+                        <div id="logoPreview" class="logo-preview">No logo selected</div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Primary Color</label>
+                            <input type="color" name="primary_color" id="primary_color" value="#4a148c">
+                        </div>
+                        <div class="form-group">
+                            <label>Accent Color</label>
+                            <input type="color" name="accent_color" id="accent_color" value="#d4af37">
+                        </div>
+                        <div class="form-group">
+                            <label>Background Color</label>
+                            <input type="color" name="background_color" id="background_color" value="#f8f9fa">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">Save Appearance</button>
+                </form>
             </div>
         </div>
 
@@ -989,6 +1057,50 @@
             }
         }
 
+        function updateLogoPreview() {
+            const url = document.getElementById('logo_url')?.value || '';
+            const preview = document.getElementById('logoPreview');
+            if (!preview) return;
+            preview.innerHTML = url
+                ? `<img src="${escapeHtml(url)}" alt="Logo preview">`
+                : 'No logo selected';
+        }
+
+        async function loadSiteSettings() {
+            try {
+                const res = await fetch('/api/admin/site-settings');
+                const settings = await res.json();
+                const form = document.getElementById('appearanceForm');
+                if (!form) return;
+                ['brand_name', 'logo_url', 'font_family', 'primary_color', 'accent_color', 'background_color'].forEach(field => {
+                    if (form.elements[field]) form.elements[field].value = settings[field] || '';
+                });
+                updateLogoPreview();
+            } catch (err) {
+                console.error('Error loading site settings', err);
+            }
+        }
+
+        async function handleSiteSettingsUpdate(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            try {
+                const res = await fetch('/api/admin/site-settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    showMessage('Appearance saved!', 'success');
+                } else {
+                    showMessage('Error saving appearance', 'error');
+                }
+            } catch (err) {
+                showMessage('Connection error', 'error');
+            }
+        }
+
         let _isUploading = false;
 
         async function uploadFile(file) {
@@ -1000,6 +1112,27 @@
                 throw new Error(data.error || 'Upload failed');
             }
             return data.url;
+        }
+
+        async function uploadSiteLogo(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            _isUploading = true;
+            document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = true);
+
+            try {
+                const url = await uploadFile(file);
+                document.getElementById('logo_url').value = url;
+                updateLogoPreview();
+                showMessage('Logo uploaded. Click Save Appearance to publish it.', 'success');
+            } catch (err) {
+                showMessage('Logo upload failed: ' + err.message, 'error');
+            } finally {
+                _isUploading = false;
+                document.querySelectorAll('button[type=submit]').forEach(b => b.disabled = false);
+                input.value = '';
+            }
         }
 
         async function uploadGalleryImages(input, fieldId, previewId) {
@@ -1158,6 +1291,7 @@
 
         loadCategories().then(loadProducts);
         loadHomepageSettings();
+        loadSiteSettings();
     </script>
 </body>
 </html>

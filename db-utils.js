@@ -106,6 +106,19 @@ function initDatabase() {
         if (err) fail(err);
       });
 
+      // Site appearance settings table
+      db.run(`CREATE TABLE IF NOT EXISTS site_settings (
+        id INTEGER PRIMARY KEY,
+        logo_url TEXT DEFAULT '',
+        brand_name TEXT DEFAULT 'Crystal Jewelz',
+        font_family TEXT DEFAULT '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        primary_color TEXT DEFAULT '#4a148c',
+        accent_color TEXT DEFAULT '#d4af37',
+        background_color TEXT DEFAULT '#f8f9fa'
+      )`, (err) => {
+        if (err) fail(err);
+      });
+
       // Cart table (session-based)
       db.run(`CREATE TABLE IF NOT EXISTS cart_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,6 +146,7 @@ function initDatabase() {
           await migrateProducts();
           await migrateProductImages();
           await migrateHomepage();
+          await migrateSiteSettings();
           await initDefaultAdmin();
           await ensureCategories();
           if (!settled) {
@@ -220,6 +234,19 @@ function migrateHomepage() {
       });
     });
   });
+}
+
+async function migrateSiteSettings() {
+  await run(`CREATE TABLE IF NOT EXISTS site_settings (
+    id INTEGER PRIMARY KEY,
+    logo_url TEXT DEFAULT '',
+    brand_name TEXT DEFAULT 'Crystal Jewelz',
+    font_family TEXT DEFAULT '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    primary_color TEXT DEFAULT '#4a148c',
+    accent_color TEXT DEFAULT '#d4af37',
+    background_color TEXT DEFAULT '#f8f9fa'
+  )`);
+  await run('INSERT OR IGNORE INTO site_settings (id) VALUES (1)');
 }
 
 // Product functions
@@ -471,6 +498,30 @@ function updateHomepage(data) {
   });
 }
 
+function defaultSiteSettings() {
+  return {
+    logo_url: '',
+    brand_name: 'Crystal Jewelz',
+    font_family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    primary_color: '#4a148c',
+    accent_color: '#d4af37',
+    background_color: '#f8f9fa'
+  };
+}
+
+async function getSiteSettings() {
+  return (await get('SELECT * FROM site_settings WHERE id=1')) || defaultSiteSettings();
+}
+
+async function updateSiteSettings(data) {
+  const fields = ['logo_url', 'brand_name', 'font_family', 'primary_color', 'accent_color', 'background_color'];
+  const values = fields.map(field => data[field] || defaultSiteSettings()[field]);
+  await run(
+    `INSERT OR REPLACE INTO site_settings (id, ${fields.join(', ')}) VALUES (1, ${fields.map(() => '?').join(', ')})`,
+    values
+  );
+}
+
 // Admin auth
 function checkAdminLogin(username, password) {
   return new Promise((resolve, reject) => {
@@ -590,6 +641,8 @@ module.exports = {
   updateCategory,
   getHomepage,
   updateHomepage,
+  getSiteSettings,
+  updateSiteSettings,
   checkAdminLogin,
   updateAdminPassword,
   getCart,

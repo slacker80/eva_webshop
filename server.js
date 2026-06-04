@@ -9,7 +9,7 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
 const multer = require('multer');
-const { initDatabase, getProducts, getProduct, addProduct, updateProduct, deleteProduct, getCategories, addCategory, updateCategory, getHomepage, updateHomepage, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
+const { initDatabase, getProducts, getProduct, addProduct, updateProduct, deleteProduct, getCategories, addCategory, updateCategory, getHomepage, updateHomepage, getSiteSettings, updateSiteSettings, checkAdminLogin, updateAdminPassword, getCart, addToCart, updateCartQuantity, removeFromCart, clearCart } = require('./db-utils');
 const { sendManualOrderEmail } = require('./backend/email');
 
 const app = express();
@@ -70,6 +70,27 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   }[ch]));
+}
+
+function hexColor(value, fallback) {
+  const color = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
+
+function rgbaFromHex(hex, alpha) {
+  const color = hex.replace('#', '');
+  const r = parseInt(color.slice(0, 2), 16);
+  const g = parseInt(color.slice(2, 4), 16);
+  const b = parseInt(color.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function fontFamily(value) {
+  const font = String(value || '').trim();
+  if (!font || font.length > 140 || /[{};<>]/.test(font)) {
+    return '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  }
+  return font;
 }
 
 function categoryLabel(name) {
@@ -311,6 +332,16 @@ app.get('/api/categories', async (req, res) => {
 // Shared HTML layout helper
 async function renderPage(title, content, activeCat = '') {
   const categories = await getCategories();
+  const settings = await getSiteSettings();
+  const brandName = String(settings.brand_name || 'Crystal Jewelz').trim() || 'Crystal Jewelz';
+  const logoUrl = String(settings.logo_url || '').trim();
+  const primaryColor = hexColor(settings.primary_color, '#4a148c');
+  const accentColor = hexColor(settings.accent_color, '#d4af37');
+  const backgroundColor = hexColor(settings.background_color, '#f8f9fa');
+  const primarySoft = rgbaFromHex(primaryColor, 0.12);
+  const logoMarkup = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(brandName)}"><span>${escapeHtml(brandName)}</span>`
+    : `<span class="logo-mark">CJ</span><span>${escapeHtml(brandName)}</span>`;
   const navItems = [
     { label: 'All Products', href: '/products' },
     ...categories.map(category => ({
@@ -324,29 +355,32 @@ async function renderPage(title, content, activeCat = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crystal Jewelz - ${escapeHtml(title)}</title>
+    <title>${escapeHtml(brandName)} - ${escapeHtml(title)}</title>
     <style>
+        :root { --primary: ${primaryColor}; --accent: ${accentColor}; --bg: ${backgroundColor}; --primary-soft: ${primarySoft}; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; background: #f8f9fa; }
+        body { font-family: ${fontFamily(settings.font_family)}; line-height: 1.6; color: #333; background: var(--bg); }
         .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
         
-        header { background: linear-gradient(135deg, #4a148c 0%, #7b1fa2 50%, #d4af37 100%); color: white; padding: 1.5rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+        header { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; padding: 1.5rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
         .header-content { display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.8rem; font-weight: bold; color: white; text-decoration: none; }
-        .logo:hover { color: #d4af37; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; font-size: 1.8rem; font-weight: bold; color: white; text-decoration: none; min-width: 0; }
+        .logo img { max-height: 56px; max-width: 190px; object-fit: contain; display: block; background: rgba(255,255,255,0.16); border-radius: 8px; }
+        .logo-mark { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.2); }
+        .logo:hover { color: white; opacity: 0.92; }
         
         .hero { background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 50%, #ffecb3 100%); padding: 4rem 0; text-align: center; margin-bottom: 2rem; }
-        .hero h1 { font-size: 2.5rem; color: #4a148c; margin-bottom: 0.5rem; }
+        .hero h1 { font-size: 2.5rem; color: var(--primary); margin-bottom: 0.5rem; }
         .hero p { font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto; }
         
         main { padding: 2rem 0; }
         
         .category-nav { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; }
-        .filter-btn { display: inline-block; padding: 0.5rem 1.5rem; border: 2px solid #7b1fa2; background: white; color: #7b1fa2; border-radius: 25px; cursor: pointer; transition: all 0.3s; font-weight: 500; text-decoration: none; font-size: 0.95rem; }
-        .filter-btn:hover, .filter-btn.active { background: #7b1fa2; color: white; }
+        .filter-btn { display: inline-block; padding: 0.5rem 1.5rem; border: 2px solid var(--primary); background: white; color: var(--primary); border-radius: 25px; cursor: pointer; transition: all 0.3s; font-weight: 500; text-decoration: none; font-size: 0.95rem; }
+        .filter-btn:hover, .filter-btn.active { background: var(--primary); color: white; }
         
         .category-header { margin-bottom: 2rem; }
-        .category-header h1 { color: #4a148c; font-size: 2rem; }
+        .category-header h1 { color: var(--primary); font-size: 2rem; }
         .category-count { color: #666; margin-top: 0.25rem; }
         
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
@@ -356,54 +390,54 @@ async function renderPage(title, content, activeCat = '') {
         .product-image img { width: 100%; height: 100%; object-fit: cover; }
         .product-name { font-size: 1.1rem; font-weight: 600; color: #2d3748; margin-bottom: 0.5rem; }
         .product-name a { color: inherit; text-decoration: none; }
-        .product-name a:hover { color: #7b1fa2; }
-        .product-category { display: inline-block; background: rgba(123, 31, 162, 0.1); color: #7b1fa2; padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
+        .product-name a:hover { color: var(--primary); }
+        .product-category { display: inline-block; background: var(--primary-soft); color: var(--primary); padding: 0.2rem 0.75rem; border-radius: 15px; font-size: 0.8rem; margin-bottom: 0.75rem; }
         .product-description { color: #718096; margin-bottom: 1rem; font-size: 0.9rem; line-height: 1.5; }
         .product-footer { display: flex; justify-content: space-between; align-items: center; }
-        .product-price { font-size: 1.4rem; font-weight: bold; color: #d4af37; }
-        .add-btn { background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; font-weight: 600; transition: opacity 0.3s; }
+        .product-price { font-size: 1.4rem; font-weight: bold; color: var(--accent); }
+        .add-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 25px; cursor: pointer; font-weight: 600; transition: opacity 0.3s; }
         .add-btn:hover { opacity: 0.9; }
         .add-btn:disabled { background: #cbd5e0; cursor: not-allowed; opacity: 1; }
         .add-btn.added { background: #2f855a; }
         .cart-button { margin-left: 0.75rem; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.55); padding: 0.5rem 1rem; border-radius: 25px; cursor: pointer; font-weight: 600; }
-        .cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; margin-left: 0.4rem; border-radius: 999px; background: #d4af37; color: #2d1742; font-size: 0.85rem; }
+        .cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; margin-left: 0.4rem; border-radius: 999px; background: var(--accent); color: #2d1742; font-size: 0.85rem; }
         .cart-modal { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.45); padding: 2rem; }
         .cart-modal.open { display: block; }
         .cart-panel { max-width: 560px; margin: 5vh auto; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 18px 50px rgba(0,0,0,0.25); }
         .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .cart-close { border: 0; background: transparent; font-size: 1.75rem; cursor: pointer; color: #4a148c; }
+        .cart-close { border: 0; background: transparent; font-size: 1.75rem; cursor: pointer; color: var(--primary); }
         .cart-item { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid #eee; }
         .cart-actions { display: flex; align-items: center; gap: 0.5rem; }
-        .cart-actions button { border: 0; background: #7b1fa2; color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
+        .cart-actions button { border: 0; background: var(--primary); color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; cursor: pointer; }
         .cart-actions button:disabled { background: #cbd5e0; cursor: not-allowed; }
-        .cart-total { margin-top: 1rem; font-weight: 700; color: #4a148c; text-align: right; }
-        .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
+        .cart-total { margin-top: 1rem; font-weight: 700; color: var(--primary); text-align: right; }
+        .checkout-link { display: inline-block; width: 100%; box-sizing: border-box; margin-top: 1rem; padding: 0.85rem 1rem; border-radius: 25px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; text-align: center; text-decoration: none; font-weight: 700; }
         .empty-cart { color: #718096; padding: 1rem 0; }
         .image-zoom-modal { display: none; position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,0.78); padding: 1rem; align-items: center; justify-content: center; }
         .image-zoom-modal.open { display: flex; }
         .image-zoom-panel { position: relative; max-width: min(92vw, 1100px); max-height: 92vh; }
         .image-zoom-panel img { display: block; max-width: 100%; max-height: 92vh; object-fit: contain; border-radius: 8px; background: white; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
-        .image-zoom-close { position: absolute; top: -0.75rem; right: -0.75rem; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 50%; background: white; color: #4a148c; font-size: 1.75rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+        .image-zoom-close { position: absolute; top: -0.75rem; right: -0.75rem; width: 2.5rem; height: 2.5rem; border: 0; border-radius: 50%; background: white; color: var(--primary); font-size: 1.75rem; line-height: 1; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
         .product-detail { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr); gap: 2rem; background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         .detail-main-image { width: 100%; aspect-ratio: 4 / 3; border: 0; padding: 0; border-radius: 10px; overflow: hidden; background: #f3f3f3; cursor: zoom-in; }
         .detail-main-image img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fafafa; }
         .detail-thumbs { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 0.8rem; }
         .detail-thumb { width: 72px; height: 72px; border: 2px solid transparent; border-radius: 8px; padding: 0; overflow: hidden; background: #f3f3f3; cursor: pointer; }
-        .detail-thumb.active { border-color: #7b1fa2; }
+        .detail-thumb.active { border-color: var(--primary); }
         .detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .detail-info h1 { color: #4a148c; line-height: 1.15; margin: 0.35rem 0 0.75rem; }
+        .detail-info h1 { color: var(--primary); line-height: 1.15; margin: 0.35rem 0 0.75rem; }
         .detail-short { color: #4a5568; white-space: pre-wrap; margin: 1rem 0; }
         .detail-long { color: #333; white-space: pre-wrap; margin: 1rem 0 1.25rem; line-height: 1.65; }
         .stock-note { color: #718096; font-size: 0.95rem; margin: 0.5rem 0 1rem; }
         @media (max-width: 760px) { .product-detail { grid-template-columns: 1fr; padding: 1rem; } }
         
-        footer { background: #4a148c; color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
+        footer { background: var(--primary); color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
         
         .about-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin: 4rem 0; }
         .about-card { text-align: center; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         .about-card .icon { font-size: 2.5rem; margin-bottom: 1rem; }
-        .about-card h3 { color: #4a148c; margin-bottom: 0.5rem; }
+        .about-card h3 { color: var(--primary); margin-bottom: 0.5rem; }
         .about-card p { color: #666; font-size: 0.95rem; }
     </style>
 </head>
@@ -411,7 +445,7 @@ async function renderPage(title, content, activeCat = '') {
     <header>
         <div class="container">
             <div class="header-content">
-                <a href="/" class="logo">💎 Crystal Jewelz</a>
+                <a href="/" class="logo">${logoMarkup}</a>
                 <nav>
                     <a href="/" class="filter-btn" style="color:white;border-color:rgba(255,255,255,0.5);background:transparent;">Home</a>
                     <button type="button" id="cartButton" class="cart-button">Cart <span id="cartCount" class="cart-count">0</span></button>
@@ -449,7 +483,7 @@ async function renderPage(title, content, activeCat = '') {
 
     <footer>
         <div class="container">
-            <p>© 2026 Crystal Jewelz. Handcrafted with love ✨</p>
+            <p>&copy; 2026 ${escapeHtml(brandName)}. Handcrafted with love</p>
         </div>
     </footer>
     <script>
@@ -699,6 +733,15 @@ app.get('/api/homepage', async (req, res) => {
     res.json(homepage);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch homepage' });
+  }
+});
+
+app.get('/api/site-settings', async (req, res) => {
+  try {
+    const settings = await getSiteSettings();
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch site settings' });
   }
 });
 
@@ -1063,6 +1106,24 @@ app.put('/api/admin/homepage', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update homepage' });
+  }
+});
+
+app.get('/api/admin/site-settings', requireAuth, async (req, res) => {
+  try {
+    const settings = await getSiteSettings();
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch site settings' });
+  }
+});
+
+app.put('/api/admin/site-settings', requireAuth, async (req, res) => {
+  try {
+    await updateSiteSettings(req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update site settings' });
   }
 });
 
