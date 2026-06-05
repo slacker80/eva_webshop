@@ -218,7 +218,7 @@ app.get('/', async (req, res) => {
                 </div>
             </div>
 
-            <div class="category-header">
+            <div class="category-header featured-header">
                 <h1>${renderHeadingText(hp.featured_title)}</h1>
                 <p class="category-count">${featured.length} ${escapeHtml(hp.featured_subtitle)}</p>
             </div>
@@ -399,6 +399,9 @@ async function renderPage(title, content, activeCat = '') {
         .category-header { margin-bottom: 2rem; }
         .category-header h1 { color: var(--primary); font-size: 2rem; line-height: 1.18; letter-spacing: 0; overflow-wrap: normal; word-break: normal; text-wrap: balance; }
         .heading-text-wrap { display: inline-flex; align-items: baseline; gap: 0.28em; max-width: 100%; flex-wrap: wrap; }
+        .featured-header { text-align: center; }
+        .featured-header h1 { display: flex; justify-content: center; }
+        .featured-header .heading-text-wrap { width: 100%; justify-content: center; }
         .heading-main { min-width: 0; }
         .heading-prefix { flex: 0 0 auto; white-space: nowrap; }
         .heading-emoji { display: inline-block; flex: 0 0 auto; font-size: 0.85em; line-height: 1; transform: translateY(-0.04em); }
