@@ -97,6 +97,19 @@ function formatMoney(value) {
   return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
 }
 
+function renderHeadingText(value) {
+  const text = String(value || '').trim();
+  const prefixed = text.match(/^(\([^)]{1,48}\))\s+(.+)$/u);
+  if (prefixed && prefixed[2]) {
+    return `<span class="heading-text-wrap heading-prefixed"><span class="heading-prefix">${escapeHtml(prefixed[1])}</span><span class="heading-main">${escapeHtml(prefixed[2])}</span></span>`;
+  }
+  const decorated = text.match(/^([^\p{L}\p{N}\s]+)\s*(.*?)\s*([^\p{L}\p{N}\s]+)$/u);
+  if (decorated && decorated[2]) {
+    return `<span class="heading-text-wrap heading-decorated"><span class="heading-emoji">${escapeHtml(decorated[1])}</span><span class="heading-main">${escapeHtml(decorated[2])}</span><span class="heading-emoji">${escapeHtml(decorated[3])}</span></span>`;
+  }
+  return `<span class="heading-text-wrap"><span class="heading-main">${escapeHtml(text)}</span></span>`;
+}
+
 function categoryLabel(name) {
   const normalized = String(name || '').trim();
   if (!normalized) return 'Other';
@@ -206,7 +219,7 @@ app.get('/', async (req, res) => {
             </div>
 
             <div class="category-header">
-                <h1>${escapeHtml(hp.featured_title)}</h1>
+                <h1>${renderHeadingText(hp.featured_title)}</h1>
                 <p class="category-count">${featured.length} ${escapeHtml(hp.featured_subtitle)}</p>
             </div>
 
@@ -384,7 +397,11 @@ async function renderPage(title, content, activeCat = '') {
         .filter-btn:hover, .filter-btn.active { background: var(--primary); color: white; }
         
         .category-header { margin-bottom: 2rem; }
-        .category-header h1 { color: var(--primary); font-size: 2rem; }
+        .category-header h1 { color: var(--primary); font-size: 2rem; line-height: 1.18; letter-spacing: 0; overflow-wrap: normal; word-break: normal; text-wrap: balance; }
+        .heading-text-wrap { display: inline-flex; align-items: baseline; gap: 0.28em; max-width: 100%; flex-wrap: wrap; }
+        .heading-main { min-width: 0; }
+        .heading-prefix { flex: 0 0 auto; white-space: nowrap; }
+        .heading-emoji { display: inline-block; flex: 0 0 auto; font-size: 0.85em; line-height: 1; transform: translateY(-0.04em); }
         .category-count { color: #666; margin-top: 0.25rem; }
         
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
@@ -429,7 +446,7 @@ async function renderPage(title, content, activeCat = '') {
         .detail-thumb { width: 72px; height: 72px; border: 2px solid transparent; border-radius: 8px; padding: 0; overflow: hidden; background: #f3f3f3; cursor: pointer; }
         .detail-thumb.active { border-color: var(--primary); }
         .detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .detail-info h1 { color: var(--primary); line-height: 1.15; margin: 0.35rem 0 0.75rem; }
+        .detail-info h1 { color: var(--primary); font-size: 2rem; line-height: 1.18; letter-spacing: 0; margin: 0.35rem 0 0.75rem; overflow-wrap: break-word; word-break: normal; text-wrap: balance; }
         .detail-short { color: #4a5568; white-space: pre-wrap; margin: 1rem 0; }
         .detail-long { color: #333; white-space: pre-wrap; margin: 1rem 0 1.25rem; line-height: 1.65; }
         .stock-note { color: #718096; font-size: 0.95rem; margin: 0.5rem 0 1rem; }
@@ -446,6 +463,9 @@ async function renderPage(title, content, activeCat = '') {
             main { padding: 1.25rem 0; }
             .category-nav { flex-wrap: nowrap; overflow-x: auto; gap: 0.45rem; padding-bottom: 0.25rem; margin-bottom: 1.25rem; -webkit-overflow-scrolling: touch; }
             .filter-btn { flex: 0 0 auto; padding: 0.45rem 0.9rem; white-space: nowrap; }
+            .category-header { margin-bottom: 1.25rem; }
+            .category-header h1 { font-size: 1.48rem; line-height: 1.2; }
+            .category-header .heading-text-wrap { gap: 0.2em; }
             .products-grid { grid-template-columns: 1fr; gap: 1rem; }
             .product-card { padding: 1rem; }
             .product-footer { align-items: stretch; gap: 0.75rem; flex-direction: column; }
@@ -456,6 +476,7 @@ async function renderPage(title, content, activeCat = '') {
             .cart-item { flex-direction: column; align-items: stretch; }
             .cart-actions { justify-content: flex-end; }
             .product-detail { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+            .detail-info h1 { font-size: 1.55rem; line-height: 1.22; }
             .about-section { grid-template-columns: 1fr; gap: 1rem; margin: 2rem 0; }
         }
         
@@ -713,7 +734,7 @@ app.get('/product/:id', async (req, res) => {
                 </div>
                 <div class="detail-info">
                     <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
-                    <h1>${escapeHtml(product.name)}</h1>
+                    <h1>${renderHeadingText(product.name)}</h1>
                     <div class="product-price">${formatMoney(product.price)}</div>
                     <div class="stock-note">${stock > 0 ? `${stock} op voorraad` : 'Niet op voorraad'}</div>
                     <div class="detail-short">${escapeHtml(product.description)}</div>
