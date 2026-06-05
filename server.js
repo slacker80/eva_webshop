@@ -479,6 +479,12 @@ async function renderPage(title, content, activeCat = '') {
             .detail-info h1 { font-size: 1.55rem; line-height: 1.22; }
             .about-section { grid-template-columns: 1fr; gap: 1rem; margin: 2rem 0; }
         }
+
+        @media (max-width: 380px) {
+            .category-header h1 { font-size: 1.3rem; }
+            .category-header .heading-decorated { flex-wrap: nowrap; }
+            .detail-info h1 { font-size: 1.45rem; }
+        }
         
         footer { background: var(--primary); color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
