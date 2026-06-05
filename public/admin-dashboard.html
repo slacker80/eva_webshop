@@ -50,6 +50,8 @@
             gap: 1rem;
             margin-bottom: 2rem;
             border-bottom: 2px solid #e0e0e0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .tab-btn {
@@ -62,6 +64,7 @@
             color: #999;
             border-bottom: 3px solid transparent;
             transition: all 0.3s;
+            white-space: nowrap;
         }
 
         .tab-btn.active {
@@ -223,6 +226,19 @@
             margin-top: 2rem;
         }
 
+        .homepage-editor-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 1.5rem;
+        }
+
+        .homepage-preview-cards {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
         .featured-item {
             display: flex;
             align-items: center;
@@ -359,6 +375,32 @@
         }
 
         @media (max-width: 600px) {
+            .container {
+                padding: 0.75rem;
+            }
+
+            .tabs {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.5rem;
+                border-bottom: 0;
+                overflow: visible;
+            }
+
+            .tab-btn {
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-bottom: 3px solid transparent;
+                border-radius: 8px;
+                padding: 0.75rem 0.5rem;
+                min-height: 44px;
+            }
+
+            .tab-btn.active {
+                border-color: #7b1fa2;
+                border-bottom-color: #7b1fa2;
+            }
+
             .form-row {
                 grid-template-columns: 1fr;
             }
@@ -370,6 +412,18 @@
 
             .product-actions {
                 width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .product-info {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .homepage-editor-grid,
+            .homepage-preview-cards {
+                grid-template-columns: 1fr;
             }
 
             .category-card {
@@ -396,6 +450,7 @@
             header {
                 flex-direction: column;
                 gap: 1rem;
+                text-align: center;
             }
         }
     </style>
@@ -509,7 +564,7 @@
 
         <!-- HOMEPAGE TAB -->
         <div id="homepage" class="tab-content">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div class="homepage-editor-grid">
                 <!-- EDIT FORM -->
                 <div class="product-form">
                     <h2>Homepage Editor</h2>
@@ -561,7 +616,7 @@
                             <h1 id="pv_hero_title" style="font-size:1.5rem; color:#4a148c;"></h1>
                             <p id="pv_hero_subtitle" style="color:#666;"></p>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                        <div class="homepage-preview-cards">
                             <div style="text-align:center; padding:1rem; background:#fafafa; border-radius:8px;">
                                 <div style="font-size:2rem;" id="pv_about1_icon"></div>
                                 <h4 style="color:#4a148c;" id="pv_about1_title"></h4>
@@ -667,6 +722,10 @@
                 '"': '&quot;',
                 "'": '&#39;'
             }[ch]));
+        }
+
+        function formatMoney(value) {
+            return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
         }
 
         function categoryLabel(name) {
@@ -838,7 +897,7 @@
                             <h3>${escapeHtml(p.name)}</h3>
                             <p>${escapeHtml(p.description || 'No description')}</p>
                             <p style="font-size: 0.9rem; color: #999;">${escapeHtml(categoryLabel(p.category))} • Stock: ${Number(p.stock || 0)}</p>
-                            <div class="product-price">$${Number(p.price || 0).toFixed(2)}</div>
+                            <div class="product-price">${formatMoney(p.price)}</div>
                             ${p.featured ? '<span style="background: #ffd700; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">Featured</span>' : ''}
                         </div>
                         <div class="product-actions">

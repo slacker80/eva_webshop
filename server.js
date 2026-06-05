@@ -93,6 +93,10 @@ function fontFamily(value) {
   return font;
 }
 
+function formatMoney(value) {
+  return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
+}
+
 function categoryLabel(name) {
   const normalized = String(name || '').trim();
   if (!normalized) return 'Other';
@@ -163,7 +167,7 @@ function renderProductCard(product) {
                     <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
                     <div class="product-description">${escapeHtml(product.description)}</div>
                     <div class="product-footer">
-                        <div class="product-price">$${Number(product.price || 0).toFixed(2)}</div>
+                        <div class="product-price">${formatMoney(product.price)}</div>
                         ${addButton}
                     </div>
                 </div>`;
@@ -429,7 +433,31 @@ async function renderPage(title, content, activeCat = '') {
         .detail-short { color: #4a5568; white-space: pre-wrap; margin: 1rem 0; }
         .detail-long { color: #333; white-space: pre-wrap; margin: 1rem 0 1.25rem; line-height: 1.65; }
         .stock-note { color: #718096; font-size: 0.95rem; margin: 0.5rem 0 1rem; }
-        @media (max-width: 760px) { .product-detail { grid-template-columns: 1fr; padding: 1rem; } }
+        @media (max-width: 760px) {
+            .container { padding: 0 14px; }
+            header { padding: 1rem 0; }
+            .header-content { flex-direction: column; align-items: stretch; gap: 0.9rem; }
+            .logo { justify-content: center; text-align: center; font-size: 1.35rem; line-height: 1.2; flex-wrap: wrap; }
+            .logo img { max-height: 48px; max-width: min(180px, 80vw); }
+            header nav { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+            .hero { padding: 2.4rem 0; }
+            .hero h1 { font-size: 2rem; line-height: 1.15; }
+            .hero p { font-size: 1rem; }
+            main { padding: 1.25rem 0; }
+            .category-nav { flex-wrap: nowrap; overflow-x: auto; gap: 0.45rem; padding-bottom: 0.25rem; margin-bottom: 1.25rem; -webkit-overflow-scrolling: touch; }
+            .filter-btn { flex: 0 0 auto; padding: 0.45rem 0.9rem; white-space: nowrap; }
+            .products-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .product-card { padding: 1rem; }
+            .product-footer { align-items: stretch; gap: 0.75rem; flex-direction: column; }
+            .product-price { font-size: 1.25rem; }
+            .add-btn { width: 100%; }
+            .cart-modal { padding: 0.75rem; }
+            .cart-panel { margin: 3vh auto; padding: 1rem; }
+            .cart-item { flex-direction: column; align-items: stretch; }
+            .cart-actions { justify-content: flex-end; }
+            .product-detail { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+            .about-section { grid-template-columns: 1fr; gap: 1rem; margin: 2rem 0; }
+        }
         
         footer { background: var(--primary); color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
@@ -499,6 +527,10 @@ async function renderPage(title, content, activeCat = '') {
             return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
         }
 
+        function formatMoney(value) {
+            return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
+        }
+
         function itemProductId(item) {
             return item.product_id ?? item.productId ?? item.id;
         }
@@ -520,7 +552,7 @@ async function renderPage(title, content, activeCat = '') {
                 const stock = Number(item.stock || 0);
                 const plusDisabled = stock > 0 && quantity >= stock ? ' disabled title="Niet meer op voorraad"' : '';
                 return '<div class="cart-item">' +
-                    '<div><strong>' + escapeHtml(item.name) + '</strong><br><span>$' + price.toFixed(2) + ' each</span></div>' +
+                    '<div><strong>' + escapeHtml(item.name) + '</strong><br><span>' + formatMoney(price) + ' per stuk</span></div>' +
                     '<div class="cart-actions">' +
                         '<button type="button" data-cart-update="' + productId + '" data-change="-1">-</button>' +
                         '<span>' + quantity + '</span>' +
@@ -530,7 +562,7 @@ async function renderPage(title, content, activeCat = '') {
                 '</div>';
             }).join('');
             const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
-            cartTotal().innerHTML = 'Total: $' + total.toFixed(2) + '<br><a class="checkout-link" href="/checkout.html">Bestelling plaatsen</a>';
+            cartTotal().innerHTML = 'Totaal: ' + formatMoney(total) + '<br><a class="checkout-link" href="/checkout.html">Bestelling plaatsen</a>';
         }
 
         async function loadCart() {
@@ -682,7 +714,7 @@ app.get('/product/:id', async (req, res) => {
                 <div class="detail-info">
                     <div class="product-category">${escapeHtml(categoryLabel(product.category))}</div>
                     <h1>${escapeHtml(product.name)}</h1>
-                    <div class="product-price">$${Number(product.price || 0).toFixed(2)}</div>
+                    <div class="product-price">${formatMoney(product.price)}</div>
                     <div class="stock-note">${stock > 0 ? `${stock} op voorraad` : 'Niet op voorraad'}</div>
                     <div class="detail-short">${escapeHtml(product.description)}</div>
                     ${longDescription ? `<div class="detail-long">${escapeHtml(longDescription)}</div>` : ''}

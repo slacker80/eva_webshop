@@ -326,7 +326,7 @@
                     <div class="product-category">Bracelets</div>
                     <div class="product-description">Beautiful amethyst and rose quartz healing bracelet</div>
                     <div class="product-footer">
-                        <div class="product-price">$25</div>
+                        <div class="product-price">€25</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -334,7 +334,7 @@
                     <div class="product-category">Necklaces</div>
                     <div class="product-description">Sterling silver chain with moonstone pendant</div>
                     <div class="product-footer">
-                        <div class="product-price">$35</div>
+                        <div class="product-price">€35</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -342,7 +342,7 @@
                     <div class="product-category">Rings</div>
                     <div class="product-description">Gold-plated ring with beautiful emerald gemstone</div>
                     <div class="product-footer">
-                        <div class="product-price">$38</div>
+                        <div class="product-price">€38</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -350,7 +350,7 @@
                     <div class="product-category">Bracelets</div>
                     <div class="product-description">Beautiful amethyst and rose quartz healing bracelet</div>
                     <div class="product-footer">
-                        <div class="product-price">$25</div>
+                        <div class="product-price">€25</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -358,7 +358,7 @@
                     <div class="product-category">Necklaces</div>
                     <div class="product-description">Sterling silver chain with moonstone pendant</div>
                     <div class="product-footer">
-                        <div class="product-price">$35</div>
+                        <div class="product-price">€35</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -366,7 +366,7 @@
                     <div class="product-category">Rings</div>
                     <div class="product-description">Gold-plated ring with beautiful emerald gemstone</div>
                     <div class="product-footer">
-                        <div class="product-price">$38</div>
+                        <div class="product-price">€38</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -374,7 +374,7 @@
                     <div class="product-category">Bracelets</div>
                     <div class="product-description">Beautiful amethyst and rose quartz healing bracelet</div>
                     <div class="product-footer">
-                        <div class="product-price">$25</div>
+                        <div class="product-price">€25</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -382,7 +382,7 @@
                     <div class="product-category">Necklaces</div>
                     <div class="product-description">Sterling silver chain with moonstone pendant</div>
                     <div class="product-footer">
-                        <div class="product-price">$35</div>
+                        <div class="product-price">€35</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -390,7 +390,7 @@
                     <div class="product-category">Rings</div>
                     <div class="product-description">Gold-plated ring with beautiful emerald gemstone</div>
                     <div class="product-footer">
-                        <div class="product-price">$38</div>
+                        <div class="product-price">€38</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -398,7 +398,7 @@
                     <div class="product-category">Bracelets</div>
                     <div class="product-description">Silver and gold accents with beaded charms</div>
                     <div class="product-footer">
-                        <div class="product-price">$18</div>
+                        <div class="product-price">€18</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -406,7 +406,7 @@
                     <div class="product-category">Bracelets</div>
                     <div class="product-description">Multi-color crystals on elastic band</div>
                     <div class="product-footer">
-                        <div class="product-price">$12</div>
+                        <div class="product-price">€12</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div><div class="product-card">
@@ -414,7 +414,7 @@
                     <div class="product-category">Necklaces</div>
                     <div class="product-description">Gold-plated 3-strand layered necklace</div>
                     <div class="product-footer">
-                        <div class="product-price">$42</div>
+                        <div class="product-price">€42</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div>
@@ -459,6 +459,11 @@
         let products = [];
         let cart = [];
         let currentFilter = 'all';
+
+        function formatMoney(value) {
+            return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(Number(value || 0));
+        }
+
         // Fallback products if API fails
         const FALLBACK_PRODUCTS = [
           {id:1, name:"Crystal Healing Bracelet", category:"Bracelets", price:25, description:"Beautiful amethyst and rose quartz healing bracelet", stock:10},
@@ -558,7 +563,7 @@
                     <div class="product-category">${product.category}</div>
                     <div class="product-description">${product.description}</div>
                     <div class="product-footer">
-                        <div class="product-price">$${product.price}</div>
+                        <div class="product-price">${formatMoney(product.price)}</div>
                         <button class="add-to-cart" onclick="addToCart(${product.id})" 
                                 ${product.stock === 0 ? 'disabled' : ''}>
                             ${product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
@@ -591,7 +596,7 @@
                     <div class="product-category">${product.category}</div>
                     <div class="product-description">${product.description}</div>
                     <div class="product-footer">
-                        <div class="product-price">$${product.price}</div>
+                        <div class="product-price">${formatMoney(product.price)}</div>
                         <button class="add-btn">Add to Cart</button>
                     </div>
                 </div>
@@ -730,7 +735,7 @@
                     <div class="cart-item">
                         <div class="cart-item-info">
                             <div>${item.name}</div>
-                            <div>$${item.price} each</div>
+                            <div>${formatMoney(item.price)} per stuk</div>
                         </div>
                         <div class="cart-item-controls">
                             <button class="quantity-btn" onclick="updateQuantity(${item.productId}, -1)">-</button>
@@ -747,7 +752,7 @@
                 cartTotal.innerHTML = `
                     <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #d4af37;">
                         <div style="font-size: 1.2rem; font-weight: bold; text-align: right; margin-bottom: 1rem;">
-                            Total: $${total.toFixed(2)}
+                            Totaal: ${formatMoney(total)}
                         </div>
                         <button onclick="proceedToCheckout()" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #7b1fa2 0%, #d4af37 100%); color: white; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 1rem;">
                             🛒 Proceed to Checkout
