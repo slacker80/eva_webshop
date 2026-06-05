@@ -485,6 +485,12 @@ async function renderPage(title, content, activeCat = '') {
             .category-header .heading-decorated { flex-wrap: nowrap; }
             .detail-info h1 { font-size: 1.45rem; }
         }
+
+        @media (max-width: 340px) {
+            .category-header h1 { font-size: 1.12rem; }
+            .category-header .heading-text-wrap { gap: 0.12em; }
+            .category-header .heading-emoji { font-size: 0.75em; }
+        }
         
         footer { background: var(--primary); color: white; padding: 2rem 0; margin-top: 4rem; text-align: center; }
         footer p { color: rgba(255,255,255,0.7); }
